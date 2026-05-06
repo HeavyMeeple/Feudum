@@ -150,6 +150,34 @@
   .chk-label { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; font-size: 0.88em; color: var(--brown-dark); }
   input[type="checkbox"] { width: 14px; height: 14px; cursor: pointer; }
 
+  /* ── Tabs ── */
+  .tab-bar {
+    display: flex; flex-wrap: wrap; gap: 4px;
+    background: var(--brown-dark);
+    padding: 8px 10px; border-radius: 8px;
+    margin-bottom: 18px;
+    position: sticky; top: 0; z-index: 100;
+    box-shadow: 0 4px 16px var(--shadow);
+  }
+  .tab-btn {
+    flex: 1 1 auto; padding: 7px 10px; border: none;
+    background: rgba(255,255,255,0.1); color: var(--parchment);
+    border-radius: 5px; font-family: 'Cinzel', serif; font-size: 0.78em;
+    cursor: pointer; transition: background 0.15s; white-space: nowrap; text-align: center;
+  }
+  .tab-btn:hover { background: rgba(255,255,255,0.22); }
+  .tab-btn.active { background: var(--gold); color: var(--brown-dark); font-weight: bold; }
+  .tab-content { display: none; }
+  .tab-content.active { display: block; }
+
+  /* ── Tie UI ── */
+  .tie-box {
+    background: rgba(180,140,0,0.1); border: 1px solid var(--gold);
+    border-radius: 5px; padding: 10px 14px; margin: 8px 14px 4px;
+  }
+  .tie-box-title { color: var(--brown-mid); font-weight: bold; font-size: .88em; margin-bottom: 6px; }
+  .tie-options { display: flex; flex-wrap: wrap; gap: 10px; }
+
   /* ── Guild influence cards ── */
   .guild-players { padding: 0; }
   .guild-player-row {
@@ -219,8 +247,19 @@
     <p>Score Epoch Calculator — Calculate End-of-Epoch Points</p>
   </div>
 
+  <!-- Tab bar -->
+  <div class="tab-bar" id="tab-bar">
+    <button class="tab-btn active" data-tab="players"    onclick="showTab('players')">♟ Setup</button>
+    <button class="tab-btn"        data-tab="epoch"      onclick="showTab('epoch')">⏳ Epoch</button>
+    <button class="tab-btn"        data-tab="pawns"      onclick="showTab('pawns')">🤚 Pawns</button>
+    <button class="tab-btn"        data-tab="locations"  onclick="showTab('locations')">🗺 Locations</button>
+    <button class="tab-btn"        data-tab="guilds"     onclick="showTab('guilds')">🏛 Guilds</button>
+    <button class="tab-btn"        data-tab="disloyalty" onclick="showTab('disloyalty')" id="tab-btn-disloyalty" style="display:none">⚔ Disloyalty</button>
+    <button class="tab-btn"        data-tab="results"    onclick="showTab('results')">🏆 Results</button>
+  </div>
+
   <!-- Step 1 -->
-  <div class="section" id="sec-players">
+  <div class="section tab-content active" data-tab="players">
     <div class="section-header">♟ Step 1 — Player Setup</div>
     <div class="section-body">
       <div class="count-row">
@@ -232,7 +271,7 @@
   </div>
 
   <!-- Step 2 -->
-  <div class="section">
+  <div class="section tab-content" data-tab="epoch">
     <div class="section-header">⏳ Step 2 — Epoch</div>
     <div class="section-body">
       <div class="sub-label">Select the epoch to calculate scores (⚠️ = Disloyalty penalty applies)</div>
@@ -244,8 +283,8 @@
   </div>
 
   <!-- Step 3 -->
-  <div class="section">
-    <div class="section-header">♟ Step 3 — Pawns Status</div>
+  <div class="section tab-content" data-tab="pawns">
+    <div class="section-header">🤚 Step 3 — Pawns Status</div>
     <div class="section-body">
       <div class="sub-label">
         Assign each player's pawns (up to 3) to a guild.<br>
@@ -256,7 +295,7 @@
   </div>
 
   <!-- Step 4 -->
-  <div class="section">
+  <div class="section tab-content" data-tab="locations">
     <div class="section-header">🗺 Step 4 — Locations &amp; Landscapes</div>
     <div class="section-body">
       <div class="sub-label">
@@ -268,11 +307,11 @@
   </div>
 
   <!-- Guild Influence -->
-  <div class="section">
+  <div class="section tab-content" data-tab="guilds">
     <div class="section-header">🏛 Guild Influence</div>
     <div class="section-body">
       <div class="sub-label">
-        Guild standings auto-calculated from pawn assignments and location data above.<br>
+        Guild standings auto-calculated from pawn assignments and location data.<br>
         ⭐ Stars = Pawn ×1, Feudum ×3, Location ×1 &nbsp;|&nbsp; VP: Master +5 / Journeyman +3 / Apprentice +1
       </div>
       <div id="guild-tables-container"></div>
@@ -280,13 +319,13 @@
   </div>
 
   <!-- Step 5 -->
-  <div class="section" id="dis-section" style="display:none">
+  <div class="section tab-content" data-tab="disloyalty" id="dis-section">
     <div class="section-header">⚔ Step 5 — Disloyalty</div>
     <div class="section-body" id="dis-body"></div>
   </div>
 
   <!-- Results -->
-  <div class="section">
+  <div class="section tab-content" data-tab="results">
     <div class="section-header">🏆 Score Epoch Results</div>
     <div class="section-body">
       <div id="results-container"></div>
@@ -349,7 +388,9 @@ const S = {
   // region[r][l] = { ruler, type, feudumGuild, hasLandscape, serf, hasRes }
   region: REGIONS.map(r => Array.from({length:r.count}, () => ({ruler:-1, type:'Outpost', feudumGuild:-1, hasLandscape:false, serf:-1, hasRes:false}))),
   // dis[p] = { ep2, ep4, ep5 }
-  dis: Array.from({length:6}, () => ({ep2:false, ep4:false, ep5:false}))
+  dis: Array.from({length:6}, () => ({ep2:false, ep4:false, ep5:false})),
+  // tieWinner[g][starValue] = playerIdx — manually picked winner for a tied group
+  tieWinner: GUILDS.map(() => ({}))
 };
 
 // ──────────────────────────────────────────────
@@ -384,19 +425,37 @@ function guildStars(g, p) {
   return pawns + feudums * 3 + (hasPrimary ? locs : 0);
 }
 
-function guildRanks(g) {
-  // returns rank[p]: 1=master, 2=journeyman, 3=apprentice, 0=none
-  // ties broken by player index (lower = higher priority)
-  const starred = [];
+function guildGroups(g) {
+  // returns { sv: [playerIndices] } grouped by star count, descending sv order
+  const groups = {};
   for (let p = 0; p < S.numPlayers; p++) {
     const s = guildStars(g, p);
-    if (s > 0) starred.push({p, s});
+    if (s > 0) (groups[s] = groups[s] || []).push(p);
   }
-  starred.sort((a,b) => b.s - a.s || a.p - b.p);
+  return groups;
+}
+
+function guildRanks(g) {
+  // returns rank[p]: 1=master, 2=journeyman, 3=apprentice, 0=none
+  // ties resolved by tieWinner state; remaining fall to player-index order
+  const groups = guildGroups(g);
+  const svs = Object.keys(groups).map(Number).sort((a,b) => b-a);
   const rank = Array(6).fill(0);
-  for (let i = 0; i < starred.length && i < 3; i++) {
-    if (i === 2 && S.numPlayers < 4) break;
-    rank[starred[i].p] = i + 1;
+  let pos = 1;
+  for (const sv of svs) {
+    if (pos > 3 || (pos === 3 && S.numPlayers < 4)) break;
+    const group = groups[sv];
+    let ordered;
+    const tw = S.tieWinner[g][sv];
+    if (group.length > 1 && tw !== undefined && group.includes(tw)) {
+      ordered = [tw, ...group.filter(p => p !== tw).sort((a,b) => a-b)];
+    } else {
+      ordered = [...group].sort((a,b) => a-b);
+    }
+    for (const p of ordered) {
+      if (pos > 3 || (pos === 3 && S.numPlayers < 4)) break;
+      rank[p] = pos++;
+    }
   }
   return rank;
 }
@@ -513,9 +572,8 @@ function renderEpoch() {
   document.getElementById('dis-note').style.display = hasDis ? 'block' : 'none';
 }
 
-function renderGuilds() {
-  // ── Pawn assignment (Step 3) ──
-  let pawnHtml = '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px">';
+function renderPawns() {
+  let html = '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px">';
   for (let p=0;p<S.numPlayers;p++) {
     let slots = '';
     for (let s=0;s<3;s++) {
@@ -527,22 +585,27 @@ function renderGuilds() {
         <select onchange="setPawn(${p},${s},parseInt(this.value))">${opts}</select>
       </div>`;
     }
-    pawnHtml += `<div style="border:2px solid ${pColor(p)};border-radius:7px;padding:10px;background:${pBg(p)}">
+    html += `<div style="border:2px solid ${pColor(p)};border-radius:7px;padding:10px;background:${pBg(p)}">
       <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px;font-family:'Cinzel',serif;font-size:.9em;font-weight:bold;color:var(--brown-dark)">
         ${dot(p,14)}${S.names[p]}
       </div>
       ${slots}
     </div>`;
   }
-  pawnHtml += '</div>';
-  document.getElementById('pawns-container').innerHTML = pawnHtml;
+  html += '</div>';
+  document.getElementById('pawns-container').innerHTML = html;
+}
 
-  // ── Guild influence cards (after Step 4) ──
-  let tablesHtml = '';
+function renderGuildTables() {
+  const RANK_NAMES = {1:'Master', 2:'Journeyman', 3:'Apprentice'};
+  let html = '';
   for (let g=0;g<6;g++) {
     const G = GUILDS[g];
     const ranks = guildRanks(g);
+    const groups = guildGroups(g);
     const feedTypes = Object.entries(LOC_GUILD).filter(([,gs])=>gs.includes(g)).map(([t])=>t);
+
+    // Player rows
     let playerRows = '';
     for (let p=0;p<S.numPlayers;p++) {
       const pawns   = getPawnCount(g, p);
@@ -555,26 +618,60 @@ function renderGuilds() {
       const rankBadge = r===1?`<span class="badge badge-master">🥇 Master</span>`
                        :r===2?`<span class="badge badge-journeyman">🥈 Journeyman</span>`
                        :r===3?`<span class="badge badge-apprentice">🥉 Apprentice</span>`
-                       :'<span style="color:#bbb;font-size:.82em">No rank</span>';
+                       :'<span style="color:#bbb;font-size:.82em">—</span>';
       playerRows += `<div class="guild-player-row">
         <div class="gpr-name">${dot(p,12)}${S.names[p]}</div>
         <div class="gpr-stats">
           <span class="gpr-stat">Pawns: <strong>${pawns}</strong></span>
           <span class="gpr-stat">Feudums: <strong>${feudums}</strong></span>
-          <span class="gpr-stat">Locs: <strong>${locs}${!hasPri&&locs>0?'⚠':''}  </strong></span>
+          <span class="gpr-stat">Locs: <strong>${locs}${!hasPri&&locs>0?'⚠':''}</strong></span>
           <span class="gpr-stat">⭐ <strong>${stars}</strong></span>
         </div>
         <div class="gpr-rank">${rankBadge}</div>
         <div class="gpr-vp" style="color:${vp>0?'#1a6e1a':'#aaa'}">${vp>0?'+':''}${vp} VP</div>
       </div>`;
     }
-    tablesHtml += `<div class="guild-block" style="border-color:${G.color};margin-bottom:14px">
+
+    // Tie UI: find tied groups that affect ranks 1-3
+    let tieHtml = '';
+    let posCheck = 1;
+    const svs = Object.keys(groups).map(Number).sort((a,b)=>b-a);
+    for (const sv of svs) {
+      if (posCheck > 3 || (posCheck === 3 && S.numPlayers < 4)) break;
+      const group = groups[sv];
+      if (group.length > 1) {
+        const tw = S.tieWinner[g][sv];
+        const hasTw = tw !== undefined && group.includes(tw);
+        const rankName = RANK_NAMES[posCheck] || `Rank ${posCheck}`;
+        const opts = [...group].sort((a,b)=>a-b).map(p =>
+          `<label class="chk-label">
+            <input type="radio" name="tie_${g}_${sv}" value="${p}" ${tw===p?'checked':''}
+                   onchange="setTieWinner(${g},${sv},${p})">
+            ${dot(p,11)}${S.names[p]}
+          </label>`
+        ).join('');
+        tieHtml += `<div class="tie-box">
+          <div class="tie-box-title">⚖️ Tie at ${sv} ⭐ — Who wins ${rankName}?</div>
+          <div class="tie-options">${opts}</div>
+          ${!hasTw?'<div style="font-size:.78em;color:var(--brown-mid);margin-top:5px">No selection — defaulting to player order</div>':''}
+        </div>`;
+      }
+      posCheck += group.length;
+    }
+
+    html += `<div class="guild-block" style="border-color:${G.color};margin-bottom:14px">
       <div class="guild-head" style="background:${G.color}">${G.emoji} ${G.name} Guild</div>
       <div class="guild-players">${playerRows}</div>
+      ${tieHtml}
       <div class="guild-note">Locations counted: ${feedTypes.join(' / ')} — only when player has a Pawn or Feudum here</div>
     </div>`;
   }
-  document.getElementById('guild-tables-container').innerHTML = tablesHtml;
+  document.getElementById('guild-tables-container').innerHTML = html;
+}
+
+function renderGuilds() {
+  renderPawns();
+  renderGuildTables();
 }
 
 function renderRegions() {
@@ -653,8 +750,11 @@ function renderRegions() {
 
 function renderDisloyalty() {
   const hasDis = DIS_EPOCHS.includes(S.epoch);
-  document.getElementById('dis-section').style.display = hasDis ? 'block' : 'none';
-  if (!hasDis) return;
+  const disBtn = document.getElementById('tab-btn-disloyalty');
+  if (disBtn) disBtn.style.display = hasDis ? '' : 'none';
+  // If user is on disloyalty tab but it's no longer applicable, redirect to results
+  if (!hasDis && activeTab === 'disloyalty') showTab('results');
+  if (!hasDis) { document.getElementById('dis-body').innerHTML = ''; return; }
 
   const labels = {ep2:'Epoch II (−3 VP)', ep4:'Epoch IV (−4 VP)', ep5:'Epoch V (−5 VP)'};
   let rows = '';
@@ -747,8 +847,21 @@ function renderAll() {
 // ──────────────────────────────────────────────
 // ACTIONS
 // ──────────────────────────────────────────────
+let activeTab = 'players';
+
+function showTab(id) {
+  activeTab = id;
+  document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+  const content = document.querySelector(`.tab-content[data-tab="${id}"]`);
+  const btn = document.querySelector(`.tab-btn[data-tab="${id}"]`);
+  if (content) content.classList.add('active');
+  if (btn) btn.classList.add('active');
+}
+
 function setPlayers(n) {
   S.numPlayers = n;
+  S.tieWinner = GUILDS.map(() => ({}));
   renderAll();
 }
 
@@ -761,7 +874,14 @@ function setEpoch(e) {
 
 function setPawn(p, slot, guildIdx) {
   S.pawns[p][slot] = guildIdx;
-  renderGuilds();
+  renderPawns();
+  renderGuildTables();
+  renderResults();
+}
+
+function setTieWinner(g, sv, p) {
+  S.tieWinner[g][sv] = p;
+  renderGuildTables();
   renderResults();
 }
 
@@ -783,13 +903,14 @@ function setLoc(r, l, field, val) {
     loc.hasRes = false;
   }
   renderRegions();
-  renderGuilds();
+  renderGuildTables();
   renderDisloyalty();
   renderResults();
 }
 
 // ── Init ──
 renderAll();
+showTab('players');
 </script>
 </body>
 </html>
