@@ -386,19 +386,17 @@ function guildStars(g, p) {
 
 function guildRanks(g) {
   // returns rank[p]: 1=master, 2=journeyman, 3=apprentice, 0=none
+  // ties broken by player index (lower = higher priority)
   const starred = [];
   for (let p = 0; p < S.numPlayers; p++) {
     const s = guildStars(g, p);
     if (s > 0) starred.push({p, s});
   }
-  starred.sort((a,b) => b.s - a.s);
+  starred.sort((a,b) => b.s - a.s || a.p - b.p);
   const rank = Array(6).fill(0);
-  let pos = 1;
-  for (let i = 0; i < starred.length; i++) {
-    if (i > 0 && starred[i].s < starred[i-1].s) pos++;
-    if (pos > 3) break;
-    if (pos === 3 && S.numPlayers < 4) break;
-    rank[starred[i].p] = pos;
+  for (let i = 0; i < starred.length && i < 3; i++) {
+    if (i === 2 && S.numPlayers < 4) break;
+    rank[starred[i].p] = i + 1;
   }
   return rank;
 }
@@ -785,6 +783,7 @@ function setLoc(r, l, field, val) {
     loc.hasRes = false;
   }
   renderRegions();
+  renderGuilds();
   renderDisloyalty();
   renderResults();
 }
