@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="th">
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -181,15 +181,15 @@
 
   <div class="header">
     <h1>⚔ FEUDUM ⚔</h1>
-    <p>Score Epoch Calculator — คำนวณแต้มท้ายยุค</p>
+    <p>Score Epoch Calculator — Calculate End-of-Epoch Points</p>
   </div>
 
   <!-- Step 1 -->
   <div class="section" id="sec-players">
-    <div class="section-header">♟ ขั้นที่ 1 — ตั้งค่าผู้เล่น</div>
+    <div class="section-header">♟ Step 1 — Player Setup</div>
     <div class="section-body">
       <div class="count-row">
-        <span class="count-label">จำนวนผู้เล่น:</span>
+        <span class="count-label">Number of Players:</span>
         <div id="count-btns"></div>
       </div>
       <div class="players-grid" id="players-grid"></div>
@@ -198,23 +198,23 @@
 
   <!-- Step 2 -->
   <div class="section">
-    <div class="section-header">⏳ ขั้นที่ 2 — ยุค (Epoch)</div>
+    <div class="section-header">⏳ Step 2 — Epoch</div>
     <div class="section-body">
-      <div class="sub-label">เลือกยุคที่กำลังคำนวณแต้ม (⚠️ = มีหักแต้ม Disloyalty)</div>
+      <div class="sub-label">Select the epoch to calculate scores (⚠️ = Disloyalty penalty applies)</div>
       <div class="epoch-row" id="epoch-btns"></div>
       <div class="warn-box" id="dis-note" style="display:none">
-        ⚠️ ยุคนี้มีการหักแต้ม Disloyalty สำหรับผู้เล่นที่มี Feudum แต่ไม่ได้ทำ Military Service ครบ
+        ⚠️ This epoch has Disloyalty penalties for players who own a Feudum but did not complete Military Service
       </div>
     </div>
   </div>
 
   <!-- Step 3 -->
   <div class="section">
-    <div class="section-header">🏛 ขั้นที่ 3 — สถานะกิลด์ (Guild Status)</div>
+    <div class="section-header">🏛 Step 3 — Guild Status</div>
     <div class="section-body">
       <div class="sub-label">
-        สำหรับแต่ละกิลด์ ใส่จำนวน Pawn / Feudum / พื้นที่ (Location) ที่เกี่ยวข้องกับกิลด์นั้น<br>
-        ⭐ดาว = Pawn ×1, Feudum ×3, พื้นที่ ×1 (นับก็ต่อเมื่อมี Pawn หรือ Feudum ในกิลด์นั้นก่อน)
+        For each guild, enter the number of Pawns / Feudums / Locations associated with that guild.<br>
+        ⭐ Stars = Pawn ×1, Feudum ×3, Location ×1 (only counted when the player has a Pawn or Feudum in that guild first)
       </div>
       <div id="guilds-container"></div>
     </div>
@@ -222,11 +222,11 @@
 
   <!-- Step 4 -->
   <div class="section">
-    <div class="section-header">🗺 ขั้นที่ 4 — พื้นที่และ Landscape</div>
+    <div class="section-header">🗺 Step 4 — Locations &amp; Landscapes</div>
     <div class="section-body">
       <div class="sub-label">
-        ระบุผู้ครอบครองและประเภทในแต่ละพื้นที่ เพื่อคำนวณ Active Regions และ Landscape VP<br>
-        ผู้เล่นถือว่า "Active" ในภูมิภาคนั้นหากเป็น Ruler อย่างน้อย 1 พื้นที่ หรือเป็น Serf ที่ดูแล Landscape
+        Specify the ruler and type for each location to calculate Active Regions and Landscape VP.<br>
+        A player is considered "Active" in a region if they are the Ruler of at least one location, or are the Serf of a Landscape there.
       </div>
       <div class="region-grid" id="regions-container"></div>
     </div>
@@ -234,29 +234,29 @@
 
   <!-- Step 5 -->
   <div class="section" id="dis-section" style="display:none">
-    <div class="section-header">⚔ ขั้นที่ 5 — Disloyalty</div>
+    <div class="section-header">⚔ Step 5 — Disloyalty</div>
     <div class="section-body" id="dis-body"></div>
   </div>
 
   <!-- Results -->
   <div class="section">
-    <div class="section-header">🏆 ผลคะแนน Score Epoch</div>
+    <div class="section-header">🏆 Score Epoch Results</div>
     <div class="section-body">
       <div class="info-box">
         Guild Status: 5/3/1 VP (Master/Journeyman/Apprentice) &nbsp;|&nbsp;
-        Landscapes: 4 VP (มี resource) / 2 VP (ว่าง) &nbsp;|&nbsp;
-        Active Regions: 1/3/5/7/9/11 VP (1–6 ภูมิภาค)
+        Landscapes: 4 VP (with resource) / 2 VP (empty) &nbsp;|&nbsp;
+        Active Regions: 1/3/5/7/9/11 VP (1–6 regions)
       </div>
       <div class="scroll-x">
         <table class="results-table">
           <thead>
             <tr>
-              <th style="text-align:left">ผู้เล่น</th>
+              <th style="text-align:left">Player</th>
               <th>Guild Status VP</th>
               <th>Landscapes VP</th>
               <th>Active Regions VP</th>
               <th>Disloyalty VP</th>
-              <th>รวม Epoch นี้</th>
+              <th>Epoch Total</th>
             </tr>
           </thead>
           <tbody id="results-body"></tbody>
@@ -272,21 +272,21 @@
 // DATA
 // ──────────────────────────────────────────────
 const GUILDS = [
-  { name:'Farmer',    th:'เกษตรกร',   emoji:'🌾', color:'#5a6e2a', bg:'#eef3d0' },
-  { name:'Merchant',  th:'พ่อค้า',    emoji:'⚖️', color:'#8b6000', bg:'#fdf3d0' },
-  { name:'Alchemist', th:'นักเล่นแร่', emoji:'⚗️', color:'#5c2a8e', bg:'#f0e8ff' },
-  { name:'Knight',    th:'อัศวิน',    emoji:'⚔️', color:'#8b1a1a', bg:'#ffe8e8' },
-  { name:'Noble',     th:'ขุนนาง',    emoji:'👑', color:'#1a3c8b', bg:'#e8eeff' },
-  { name:'Monk',      th:'พระ',       emoji:'🕊️', color:'#4a4a4a', bg:'#ececec' }
+  { name:'Farmer',    emoji:'🌾', color:'#5a6e2a', bg:'#eef3d0' },
+  { name:'Merchant',  emoji:'⚖️', color:'#8b6000', bg:'#fdf3d0' },
+  { name:'Alchemist', emoji:'⚗️', color:'#5c2a8e', bg:'#f0e8ff' },
+  { name:'Knight',    emoji:'⚔️', color:'#8b1a1a', bg:'#ffe8e8' },
+  { name:'Noble',     emoji:'👑', color:'#1a3c8b', bg:'#e8eeff' },
+  { name:'Monk',      emoji:'🕊️', color:'#4a4a4a', bg:'#ececec' }
 ];
 
 const REGIONS = [
-  { name:'Sea',       th:'ทะเล',        emoji:'🌊', count:3, color:'#1565C0', border:'#42A5F5' },
-  { name:'Island',    th:'เกาะ',         emoji:'🏝️', count:4, color:'#00695C', border:'#26A69A' },
-  { name:'Forest',    th:'ป่า',          emoji:'🌲', count:3, color:'#2E7D32', border:'#66BB6A' },
-  { name:'Desert',    th:'ทะเลทราย',    emoji:'🏜️', count:5, color:'#BF360C', border:'#FF8A65' },
-  { name:'Badlands',  th:'ที่รกร้าง',   emoji:'🗻', count:4, color:'#6D4C41', border:'#A1887F' },
-  { name:'Mountain',  th:'ภูเขา',       emoji:'⛰️', count:2, color:'#455A64', border:'#90A4AE' }
+  { name:'Sea',       emoji:'🌊', count:3, color:'#1565C0', border:'#42A5F5' },
+  { name:'Island',    emoji:'🏝️', count:4, color:'#00695C', border:'#26A69A' },
+  { name:'Forest',    emoji:'🌲', count:3, color:'#2E7D32', border:'#66BB6A' },
+  { name:'Desert',    emoji:'🏜️', count:5, color:'#BF360C', border:'#FF8A65' },
+  { name:'Badlands',  emoji:'🗻', count:4, color:'#6D4C41', border:'#A1887F' },
+  { name:'Mountain',  emoji:'⛰️', count:2, color:'#455A64', border:'#90A4AE' }
 ];
 
 const P_COLORS = ['#C0392B','#2980B9','#27AE60','#8E44AD','#E67E22','#16A085'];
@@ -302,7 +302,7 @@ const DIS_VP     = {2:-3, 4:-4, 5:-5};
 const S = {
   numPlayers: 4,
   epoch: 1,
-  names: ['ผู้เล่น 1','ผู้เล่น 2','ผู้เล่น 3','ผู้เล่น 4','ผู้เล่น 5','ผู้เล่น 6'],
+  names: ['Player 1','Player 2','Player 3','Player 4','Player 5','Player 6'],
   // guild[g][p] = { pawns, feudums, locs }
   guild: GUILDS.map(() => Array.from({length:6}, () => ({pawns:0, feudums:0, locs:0}))),
   // region[r][l] = { ruler, type, hasLandscape, serf, hasRes }
@@ -389,7 +389,7 @@ function calcDisVP(p) {
 // ──────────────────────────────────────────────
 // HELPERS
 // ──────────────────────────────────────────────
-function pOpts(sel, none=true, noneLbl='ไม่มี') {
+function pOpts(sel, none=true, noneLbl='None') {
   let s = none ? `<option value="-1"${sel===-1?' selected':''}>— ${noneLbl} —</option>` : '';
   for (let p = 0; p < S.numPlayers; p++)
     s += `<option value="${p}"${sel===p?' selected':''}>${S.names[p]}</option>`;
@@ -423,7 +423,7 @@ function renderPlayers() {
   for (let p=0;p<S.numPlayers;p++) {
     h += `<div class="player-card" style="border-color:${P_COLORS[p]};background:${P_BG[p]}">
       <div class="player-dot" style="background:${P_COLORS[p]}"></div>
-      <div style="font-size:.78em;color:var(--brown-mid);margin-bottom:4px">ผู้เล่น ${p+1}</div>
+      <div style="font-size:.78em;color:var(--brown-mid);margin-bottom:4px">Player ${p+1}</div>
       <input class="player-name-input" style="border-color:${P_COLORS[p]}"
              value="${S.names[p]}" onchange="S.names[${p}]=this.value;renderAll()">
     </div>`;
@@ -436,7 +436,7 @@ function renderEpoch() {
   let h = '';
   for (let e=1;e<=5;e++) {
     const warn = DIS_EPOCHS.includes(e) ? ' ⚠️' : '';
-    h += `<button class="epoch-btn${e===S.epoch?' active':''}" onclick="setEpoch(${e})">ยุค ${labels[e-1]}${warn}</button>`;
+    h += `<button class="epoch-btn${e===S.epoch?' active':''}" onclick="setEpoch(${e})">Epoch ${labels[e-1]}${warn}</button>`;
   }
   document.getElementById('epoch-btns').innerHTML = h;
   const hasDis = DIS_EPOCHS.includes(S.epoch);
@@ -475,29 +475,29 @@ function renderGuilds() {
           <button class="spn-btn" onclick="adjGuild(${g},${p},'locs',-1)">−</button>
           <span class="spn-val${!hasPri&&d.locs>0?' vp-neg':''}">${d.locs}</span>
           <button class="spn-btn" onclick="adjGuild(${g},${p},'locs',1)">+</button>
-        </div>${!hasPri&&d.locs>0?'<div style="font-size:.7em;color:#c00">ต้องมี Pawn/Feudum ก่อน</div>':''}</td>
+        </div>${!hasPri&&d.locs>0?'<div style="font-size:.7em;color:#c00">Requires Pawn or Feudum first</div>':''}</td>
         <td><strong>${stars} ⭐</strong></td>
         <td>${rankBadge}</td>
         <td style="color:${vp>0?'#1a6e1a':'#aaa'};font-weight:bold">${vp>0?'+':''}${vp} VP</td>
       </tr>`;
     }
     html += `<div class="guild-block" style="border-color:${G.color}">
-      <div class="guild-head" style="background:${G.color}">${G.emoji} กิลด์${G.th} — ${G.name} Guild</div>
+      <div class="guild-head" style="background:${G.color}">${G.emoji} ${G.name} Guild</div>
       <div class="scroll-x" style="padding:0 12px 12px">
         <table>
           <thead><tr>
-            <th style="text-align:left">ผู้เล่น</th>
-            <th>Pawns<br><small>(+1 ⭐/อัน)</small></th>
-            <th>Feudums<br><small>(+3 ⭐/อัน)</small></th>
-            <th>พื้นที่ที่ครอบครอง<br><small>(+1 ⭐/อัน)*</small></th>
-            <th>ดาวรวม</th>
-            <th>สถานะ</th>
+            <th style="text-align:left">Player</th>
+            <th>Pawns<br><small>(+1 ⭐ each)</small></th>
+            <th>Feudums<br><small>(+3 ⭐ each)</small></th>
+            <th>Locations Controlled<br><small>(+1 ⭐ each)*</small></th>
+            <th>Total Stars</th>
+            <th>Status</th>
             <th>Guild VP</th>
           </tr></thead>
           <tbody>${rows}</tbody>
         </table>
       </div>
-      <div class="guild-note">* พื้นที่ (Outpost/Farm/Town) ที่มี icon ของกิลด์นี้ — นับเฉพาะเมื่อผู้เล่นมี Pawn หรือ Feudum ของกิลด์นี้ก่อน</div>
+      <div class="guild-note">* Locations (Outpost/Farm/Town) bearing this guild's icon — only counted when the player already has a Pawn or Feudum in this guild</div>
     </div>`;
   }
   document.getElementById('guilds-container').innerHTML = html;
@@ -516,25 +516,25 @@ function renderRegions() {
       if (loc.hasLandscape) {
         landExtra = `<div style="margin-top:8px;padding:8px;background:rgba(160,140,80,.15);border-radius:4px;display:flex;gap:12px;flex-wrap:wrap;align-items:center">
           <div style="min-width:130px">
-            <label style="font-size:.78em;color:var(--brown-mid);font-weight:600;display:block;margin-bottom:3px">Serf (เจ้าของ Landscape):</label>
-            <select onchange="setLoc(${r},${l},'serf',parseInt(this.value))">${pOpts(loc.serf,false,'เลือกผู้เล่น')}</select>
+            <label style="font-size:.78em;color:var(--brown-mid);font-weight:600;display:block;margin-bottom:3px">Serf (Landscape owner):</label>
+            <select onchange="setLoc(${r},${l},'serf',parseInt(this.value))">${pOpts(loc.serf,false,'Select player')}</select>
           </div>
           <label class="chk-label">
             <input type="checkbox" ${loc.hasRes?'checked':''} onchange="setLoc(${r},${l},'hasRes',this.checked)">
-            มี Resource (4 VP แทน 2 VP)
+            Has Resource (4 VP instead of 2 VP)
           </label>
         </div>`;
       }
 
       locsHtml += `<div class="loc-item">
-        <div style="font-size:.78em;font-weight:700;color:${R.color};margin-bottom:6px">พื้นที่ #${l+1}</div>
+        <div style="font-size:.78em;font-weight:700;color:${R.color};margin-bottom:6px">Location #${l+1}</div>
         <div class="loc-row">
           <div class="loc-field">
-            <label>ผู้ครอบครอง (Ruler):</label>
+            <label>Ruler:</label>
             <select onchange="setLoc(${r},${l},'ruler',parseInt(this.value))">${pOpts(loc.ruler)}</select>
           </div>
           <div class="loc-field">
-            <label>ประเภท:</label>
+            <label>Type:</label>
             <select ${!hasRuler?'disabled':''} onchange="setLoc(${r},${l},'type',this.value)">
               ${LOC_TYPES.map(t=>`<option value="${t}"${loc.type===t?' selected':''}>${t}</option>`).join('')}
             </select>
@@ -543,7 +543,7 @@ function renderRegions() {
         <div style="margin-top:8px">
           <label class="chk-label">
             <input type="checkbox" ${loc.hasLandscape?'checked':''} onchange="setLoc(${r},${l},'hasLandscape',this.checked)">
-            มี Landscape
+            Has Landscape
           </label>
         </div>
         ${landExtra}
@@ -557,10 +557,10 @@ function renderRegions() {
       ? `<div style="padding:6px 12px;background:rgba(0,0,0,.06);font-size:.8em;color:var(--brown-mid)">
            Active: ${activeP.map(p=>`${dot(p,10)}${S.names[p]}`).join(', ')}
          </div>`
-      : `<div style="padding:6px 12px;background:rgba(0,0,0,.04);font-size:.8em;color:#aaa">ยังไม่มีผู้เล่น Active</div>`;
+      : `<div style="padding:6px 12px;background:rgba(0,0,0,.04);font-size:.8em;color:#aaa">No active players</div>`;
 
     html += `<div class="region-card" style="border-color:${R.border}">
-      <div class="region-head" style="background:${R.color}">${R.emoji} ${R.th} Region — ${R.count} พื้นที่</div>
+      <div class="region-head" style="background:${R.color}">${R.emoji} ${R.name} Region — ${R.count} locations</div>
       ${locsHtml}
       ${summary}
     </div>`;
@@ -582,9 +582,9 @@ function renderDisloyalty() {
     const d = S.dis[p];
     const pen = calcDisVP(p);
     let checks = '';
-    if (S.epoch>=2) checks+=`<label class="chk-label"><input type="checkbox" ${d.ep2?'checked':''} onchange="S.dis[${p}].ep2=this.checked;renderDisloyalty();renderResults()"> ผ่าน ${labels.ep2}</label>`;
-    if (S.epoch>=4) checks+=`<label class="chk-label"><input type="checkbox" ${d.ep4?'checked':''} onchange="S.dis[${p}].ep4=this.checked;renderDisloyalty();renderResults()"> ผ่าน ${labels.ep4}</label>`;
-    if (S.epoch>=5) checks+=`<label class="chk-label"><input type="checkbox" ${d.ep5?'checked':''} onchange="S.dis[${p}].ep5=this.checked;renderDisloyalty();renderResults()"> ผ่าน ${labels.ep5}</label>`;
+    if (S.epoch>=2) checks+=`<label class="chk-label"><input type="checkbox" ${d.ep2?'checked':''} onchange="S.dis[${p}].ep2=this.checked;renderDisloyalty();renderResults()"> Passed ${labels.ep2}</label>`;
+    if (S.epoch>=4) checks+=`<label class="chk-label"><input type="checkbox" ${d.ep4?'checked':''} onchange="S.dis[${p}].ep4=this.checked;renderDisloyalty();renderResults()"> Passed ${labels.ep4}</label>`;
+    if (S.epoch>=5) checks+=`<label class="chk-label"><input type="checkbox" ${d.ep5?'checked':''} onchange="S.dis[${p}].ep5=this.checked;renderDisloyalty();renderResults()"> Passed ${labels.ep5}</label>`;
     rows += `<tr>
       <td class="left">${dot(p)}${S.names[p]}</td>
       <td style="text-align:left"><div class="dis-checks">${checks}</div></td>
@@ -593,15 +593,15 @@ function renderDisloyalty() {
   }
 
   document.getElementById('dis-body').innerHTML = anyVassal
-    ? `<div class="sub-label" style="margin-bottom:12px">ทำเครื่องหมายว่าผู้เล่นได้ทำ Military Service ครอบคลุม catapult space ของแต่ละยุคแล้วหรือไม่</div>
+    ? `<div class="sub-label" style="margin-bottom:12px">Check whether each player has completed Military Service covering the catapult space for each epoch</div>
        <div class="scroll-x">
          <table><thead><tr>
-           <th style="text-align:left">ผู้เล่น (มี Feudum)</th>
-           <th style="text-align:left">Military Service ที่ทำแล้ว</th>
-           <th>แต้มหัก</th>
+           <th style="text-align:left">Player (owns Feudum)</th>
+           <th style="text-align:left">Military Service Completed</th>
+           <th>Penalty VP</th>
          </tr></thead><tbody>${rows}</tbody></table>
        </div>`
-    : `<p style="color:var(--brown-mid)">ไม่มีผู้เล่นที่ครอบครอง Feudum ในยุคนี้</p>`;
+    : `<p style="color:var(--brown-mid)">No players own a Feudum in this epoch</p>`;
 }
 
 function renderResults() {
@@ -618,7 +618,7 @@ function renderResults() {
       <td class="left" style="font-weight:bold">${dot(p)}${S.names[p]}</td>
       <td class="${gVP>0?'vp-pos':''}">${gVP>0?'+':''}${gVP}</td>
       <td class="${lVP>0?'vp-pos':''}">${lVP>0?'+':''}${lVP}</td>
-      <td class="${rVP>0?'vp-pos':''}">${rVP>0?'+':''}${rVP} <span style="font-size:.8em;color:#999">(${actCount} ภูมิภาค)</span></td>
+      <td class="${rVP>0?'vp-pos':''}">${rVP>0?'+':''}${rVP} <span style="font-size:.8em;color:#999">(${actCount} regions)</span></td>
       <td class="${dVP<0?'vp-neg':''}">${dVP}</td>
       <td class="vp-total" style="background:${P_BG[p]}">${tot>0?'+':''}${tot} VP</td>
     </tr>`;
