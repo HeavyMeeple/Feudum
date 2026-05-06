@@ -1,0 +1,681 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Feudum – Score Epoch Calculator</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Crimson+Text:ital,wght@0,400;0,600;1,400&display=swap');
+  :root {
+    --parchment: #f5e6c8;
+    --parchment-dark: #e8d5a0;
+    --parchment-mid: #eeddb5;
+    --brown-dark: #3b1f06;
+    --brown-mid: #7a4a1e;
+    --brown-light: #b87333;
+    --red: #8b1a1a;
+    --gold: #c9a227;
+    --shadow: rgba(40,20,5,0.35);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: #1a0d04;
+    background-image: radial-gradient(ellipse at 30% 40%, #2e1609 0%, transparent 55%), radial-gradient(ellipse at 75% 70%, #120802 0%, transparent 55%);
+    min-height: 100vh;
+    font-family: 'Crimson Text', Georgia, serif;
+    color: var(--brown-dark);
+    padding: 16px;
+    font-size: 16px;
+  }
+  .container { max-width: 1200px; margin: 0 auto; }
+
+  /* ── Header ── */
+  .header {
+    text-align: center;
+    background: linear-gradient(150deg, var(--parchment-dark), var(--parchment));
+    border: 3px solid var(--brown-mid);
+    border-radius: 10px;
+    padding: 22px 20px 16px;
+    margin-bottom: 18px;
+    box-shadow: 0 6px 24px var(--shadow);
+  }
+  .header h1 { font-family: 'Cinzel', serif; font-size: 2.4em; color: var(--red); letter-spacing: 3px; }
+  .header p  { color: var(--brown-mid); margin-top: 4px; font-size: 1.05em; font-style: italic; }
+
+  /* ── Section ── */
+  .section {
+    background: linear-gradient(160deg, var(--parchment), var(--parchment-dark));
+    border: 2px solid var(--brown-mid);
+    border-radius: 8px;
+    margin-bottom: 18px;
+    box-shadow: 0 4px 16px var(--shadow);
+    overflow: hidden;
+  }
+  .section-header {
+    background: linear-gradient(90deg, var(--brown-dark), var(--brown-mid));
+    color: var(--parchment);
+    padding: 12px 18px;
+    font-family: 'Cinzel', serif;
+    font-size: 1.1em;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .section-body { padding: 18px; }
+  .sub-label { font-size: 0.85em; color: var(--brown-mid); margin-bottom: 10px; line-height: 1.5; }
+
+  /* ── Player setup ── */
+  .count-row { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 18px; align-items: center; }
+  .count-label { font-family: 'Cinzel', serif; font-size: 0.95em; color: var(--brown-mid); }
+  .count-btn {
+    width: 46px; height: 46px;
+    border: 2px solid var(--brown-mid);
+    background: var(--parchment-dark);
+    border-radius: 50%;
+    font-family: 'Cinzel', serif; font-size: 1.2em; font-weight: bold;
+    cursor: pointer; transition: all 0.18s; color: var(--brown-dark);
+  }
+  .count-btn:hover { background: var(--brown-light); color: white; border-color: var(--gold); }
+  .count-btn.active { background: var(--brown-dark); color: var(--parchment); border-color: var(--gold); }
+  .players-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; }
+  .player-card {
+    border: 2px solid; border-radius: 7px; padding: 12px; text-align: center;
+    transition: box-shadow 0.15s;
+  }
+  .player-dot { width: 28px; height: 28px; border-radius: 50%; margin: 0 auto 6px; border: 2px solid rgba(0,0,0,0.3); }
+  .player-name-input {
+    width: 100%; background: rgba(255,255,255,0.55);
+    border: 1px solid; border-radius: 4px; padding: 5px 7px;
+    font-family: 'Crimson Text', serif; font-size: 0.95em; color: var(--brown-dark);
+    text-align: center;
+  }
+  .player-name-input:focus { outline: none; background: rgba(255,255,255,0.8); }
+
+  /* ── Epoch selector ── */
+  .epoch-row { display: flex; gap: 10px; flex-wrap: wrap; }
+  .epoch-btn {
+    padding: 9px 18px; border: 2px solid var(--brown-mid);
+    background: var(--parchment-dark); border-radius: 5px;
+    font-family: 'Cinzel', serif; font-size: 0.95em; color: var(--brown-dark);
+    cursor: pointer; transition: all 0.18s;
+  }
+  .epoch-btn:hover { border-color: var(--gold); }
+  .epoch-btn.active { background: var(--red); color: var(--parchment); border-color: var(--gold); }
+
+  /* ── Guild section ── */
+  .guild-block { border: 2px solid; border-radius: 7px; margin-bottom: 18px; overflow: hidden; }
+  .guild-head {
+    padding: 9px 16px; color: white;
+    font-family: 'Cinzel', serif; font-size: 1em;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .guild-note { font-size: 0.78em; color: var(--brown-mid); margin: 6px 14px 10px; font-style: italic; }
+
+  /* ── Tables ── */
+  .scroll-x { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 0.93em; }
+  th, td { padding: 7px 10px; border: 1px solid #c8a97a; text-align: center; vertical-align: middle; }
+  th { background: var(--parchment-dark); font-family: 'Cinzel', serif; font-size: 0.8em; color: var(--brown-dark); white-space: nowrap; }
+  td.left { text-align: left; }
+  tr:nth-child(even) td { background: rgba(244,230,193,0.4); }
+  tr:nth-child(odd) td { background: rgba(255,248,230,0.4); }
+
+  /* ── Spinner ── */
+  .spn { display: inline-flex; align-items: center; gap: 5px; justify-content: center; }
+  .spn-btn {
+    width: 22px; height: 22px; border: 1px solid var(--brown-mid); background: var(--parchment-dark);
+    border-radius: 3px; cursor: pointer; font-weight: bold; font-size: 1em; color: var(--brown-dark);
+    display: flex; align-items: center; justify-content: center; line-height: 1; transition: background 0.15s;
+  }
+  .spn-btn:hover { background: var(--brown-mid); color: white; }
+  .spn-val { min-width: 22px; text-align: center; font-weight: bold; font-size: 1.05em; }
+
+  /* ── Region grid ── */
+  .region-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 14px; }
+  .region-card { border: 2px solid; border-radius: 7px; overflow: hidden; }
+  .region-head {
+    padding: 8px 14px; color: white;
+    font-family: 'Cinzel', serif; font-size: 0.9em;
+  }
+  .loc-item { padding: 10px 12px; border-bottom: 1px solid rgba(0,0,0,0.08); background: rgba(245,230,200,0.55); }
+  .loc-item:last-child { border-bottom: none; }
+  .loc-row { display: flex; gap: 8px; flex-wrap: wrap; align-items: flex-end; }
+  .loc-field { flex: 1; min-width: 110px; }
+  .loc-field label { display: block; font-size: 0.78em; color: var(--brown-mid); margin-bottom: 3px; font-weight: 600; }
+  select {
+    width: 100%; padding: 5px 6px;
+    border: 1px solid var(--brown-mid); background: rgba(255,255,255,0.65);
+    border-radius: 4px; font-family: 'Crimson Text', serif; font-size: 0.9em; color: var(--brown-dark);
+  }
+  select:disabled { opacity: 0.5; }
+  .landscape-bar { margin-top: 8px; padding: 7px 9px; background: rgba(180,160,100,0.18); border-radius: 4px; }
+  .chk-label { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; font-size: 0.88em; color: var(--brown-dark); }
+  input[type="checkbox"] { width: 14px; height: 14px; cursor: pointer; }
+
+  /* ── Disloyalty ── */
+  .dis-checks { display: flex; flex-wrap: wrap; gap: 14px; }
+
+  /* ── Results ── */
+  .results-table th { background: var(--brown-dark); color: var(--parchment); }
+  .vp-pos { color: #1a6e1a; font-weight: bold; }
+  .vp-neg { color: #cc0000; font-weight: bold; }
+  .vp-total { font-family: 'Cinzel', serif; font-size: 1.1em; font-weight: bold; }
+  .badge {
+    display: inline-block; padding: 2px 8px; border-radius: 10px;
+    font-size: 0.82em; font-weight: bold; white-space: nowrap;
+  }
+  .badge-master     { background: #c9a227; color: #fff; }
+  .badge-journeyman { background: #888; color: #fff; }
+  .badge-apprentice { background: #a0522d; color: #fff; }
+
+  /* ── Misc ── */
+  .warn-box { background: rgba(180,30,30,0.1); border: 1px solid #cc4444; border-radius: 5px; padding: 8px 12px; font-size: 0.88em; color: var(--red); margin-top: 10px; }
+  .info-box { background: rgba(50,100,60,0.1); border: 1px solid #4a8; border-radius: 5px; padding: 8px 12px; font-size: 0.88em; color: #1a5c28; margin-bottom: 14px; }
+  @media (max-width: 600px) {
+    .header h1 { font-size: 1.7em; }
+    .region-grid { grid-template-columns: 1fr; }
+    .players-grid { grid-template-columns: repeat(2, 1fr); }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <div class="header">
+    <h1>⚔ FEUDUM ⚔</h1>
+    <p>Score Epoch Calculator — คำนวณแต้มท้ายยุค</p>
+  </div>
+
+  <!-- Step 1 -->
+  <div class="section" id="sec-players">
+    <div class="section-header">♟ ขั้นที่ 1 — ตั้งค่าผู้เล่น</div>
+    <div class="section-body">
+      <div class="count-row">
+        <span class="count-label">จำนวนผู้เล่น:</span>
+        <div id="count-btns"></div>
+      </div>
+      <div class="players-grid" id="players-grid"></div>
+    </div>
+  </div>
+
+  <!-- Step 2 -->
+  <div class="section">
+    <div class="section-header">⏳ ขั้นที่ 2 — ยุค (Epoch)</div>
+    <div class="section-body">
+      <div class="sub-label">เลือกยุคที่กำลังคำนวณแต้ม (⚠️ = มีหักแต้ม Disloyalty)</div>
+      <div class="epoch-row" id="epoch-btns"></div>
+      <div class="warn-box" id="dis-note" style="display:none">
+        ⚠️ ยุคนี้มีการหักแต้ม Disloyalty สำหรับผู้เล่นที่มี Feudum แต่ไม่ได้ทำ Military Service ครบ
+      </div>
+    </div>
+  </div>
+
+  <!-- Step 3 -->
+  <div class="section">
+    <div class="section-header">🏛 ขั้นที่ 3 — สถานะกิลด์ (Guild Status)</div>
+    <div class="section-body">
+      <div class="sub-label">
+        สำหรับแต่ละกิลด์ ใส่จำนวน Pawn / Feudum / พื้นที่ (Location) ที่เกี่ยวข้องกับกิลด์นั้น<br>
+        ⭐ดาว = Pawn ×1, Feudum ×3, พื้นที่ ×1 (นับก็ต่อเมื่อมี Pawn หรือ Feudum ในกิลด์นั้นก่อน)
+      </div>
+      <div id="guilds-container"></div>
+    </div>
+  </div>
+
+  <!-- Step 4 -->
+  <div class="section">
+    <div class="section-header">🗺 ขั้นที่ 4 — พื้นที่และ Landscape</div>
+    <div class="section-body">
+      <div class="sub-label">
+        ระบุผู้ครอบครองและประเภทในแต่ละพื้นที่ เพื่อคำนวณ Active Regions และ Landscape VP<br>
+        ผู้เล่นถือว่า "Active" ในภูมิภาคนั้นหากเป็น Ruler อย่างน้อย 1 พื้นที่ หรือเป็น Serf ที่ดูแล Landscape
+      </div>
+      <div class="region-grid" id="regions-container"></div>
+    </div>
+  </div>
+
+  <!-- Step 5 -->
+  <div class="section" id="dis-section" style="display:none">
+    <div class="section-header">⚔ ขั้นที่ 5 — Disloyalty</div>
+    <div class="section-body" id="dis-body"></div>
+  </div>
+
+  <!-- Results -->
+  <div class="section">
+    <div class="section-header">🏆 ผลคะแนน Score Epoch</div>
+    <div class="section-body">
+      <div class="info-box">
+        Guild Status: 5/3/1 VP (Master/Journeyman/Apprentice) &nbsp;|&nbsp;
+        Landscapes: 4 VP (มี resource) / 2 VP (ว่าง) &nbsp;|&nbsp;
+        Active Regions: 1/3/5/7/9/11 VP (1–6 ภูมิภาค)
+      </div>
+      <div class="scroll-x">
+        <table class="results-table">
+          <thead>
+            <tr>
+              <th style="text-align:left">ผู้เล่น</th>
+              <th>Guild Status VP</th>
+              <th>Landscapes VP</th>
+              <th>Active Regions VP</th>
+              <th>Disloyalty VP</th>
+              <th>รวม Epoch นี้</th>
+            </tr>
+          </thead>
+          <tbody id="results-body"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /container -->
+
+<script>
+// ──────────────────────────────────────────────
+// DATA
+// ──────────────────────────────────────────────
+const GUILDS = [
+  { name:'Farmer',    th:'เกษตรกร',   emoji:'🌾', color:'#5a6e2a', bg:'#eef3d0' },
+  { name:'Merchant',  th:'พ่อค้า',    emoji:'⚖️', color:'#8b6000', bg:'#fdf3d0' },
+  { name:'Alchemist', th:'นักเล่นแร่', emoji:'⚗️', color:'#5c2a8e', bg:'#f0e8ff' },
+  { name:'Knight',    th:'อัศวิน',    emoji:'⚔️', color:'#8b1a1a', bg:'#ffe8e8' },
+  { name:'Noble',     th:'ขุนนาง',    emoji:'👑', color:'#1a3c8b', bg:'#e8eeff' },
+  { name:'Monk',      th:'พระ',       emoji:'🕊️', color:'#4a4a4a', bg:'#ececec' }
+];
+
+const REGIONS = [
+  { name:'Sea',       th:'ทะเล',        emoji:'🌊', count:3, color:'#1565C0', border:'#42A5F5' },
+  { name:'Island',    th:'เกาะ',         emoji:'🏝️', count:4, color:'#00695C', border:'#26A69A' },
+  { name:'Forest',    th:'ป่า',          emoji:'🌲', count:3, color:'#2E7D32', border:'#66BB6A' },
+  { name:'Desert',    th:'ทะเลทราย',    emoji:'🏜️', count:5, color:'#BF360C', border:'#FF8A65' },
+  { name:'Badlands',  th:'ที่รกร้าง',   emoji:'🗻', count:4, color:'#6D4C41', border:'#A1887F' },
+  { name:'Mountain',  th:'ภูเขา',       emoji:'⛰️', count:2, color:'#455A64', border:'#90A4AE' }
+];
+
+const P_COLORS = ['#C0392B','#2980B9','#27AE60','#8E44AD','#E67E22','#16A085'];
+const P_BG     = ['#FADBD8','#D6EAF8','#D5F5E3','#E8DAEF','#FDEBD0','#D1F2EB'];
+const LOC_TYPES = ['Outpost','Farm','Town','Feudum'];
+const ACTIVE_VP = [0,1,3,5,7,9,11];
+const DIS_EPOCHS = [2,4,5];
+const DIS_VP     = {2:-3, 4:-4, 5:-5};
+
+// ──────────────────────────────────────────────
+// STATE
+// ──────────────────────────────────────────────
+const S = {
+  numPlayers: 4,
+  epoch: 1,
+  names: ['ผู้เล่น 1','ผู้เล่น 2','ผู้เล่น 3','ผู้เล่น 4','ผู้เล่น 5','ผู้เล่น 6'],
+  // guild[g][p] = { pawns, feudums, locs }
+  guild: GUILDS.map(() => Array.from({length:6}, () => ({pawns:0, feudums:0, locs:0}))),
+  // region[r][l] = { ruler, type, hasLandscape, serf, hasRes }
+  region: REGIONS.map(r => Array.from({length:r.count}, () => ({ruler:-1, type:'Outpost', hasLandscape:false, serf:-1, hasRes:false}))),
+  // dis[p] = { ep2, ep4, ep5 }
+  dis: Array.from({length:6}, () => ({ep2:false, ep4:false, ep5:false}))
+};
+
+// ──────────────────────────────────────────────
+// CALC
+// ──────────────────────────────────────────────
+function guildStars(g, p) {
+  const d = S.guild[g][p];
+  const hasPrimary = d.pawns > 0 || d.feudums > 0;
+  return d.pawns + d.feudums * 3 + (hasPrimary ? d.locs : 0);
+}
+
+function guildRanks(g) {
+  // returns rank[p]: 1=master, 2=journeyman, 3=apprentice, 0=none
+  const starred = [];
+  for (let p = 0; p < S.numPlayers; p++) {
+    const s = guildStars(g, p);
+    if (s > 0) starred.push({p, s});
+  }
+  starred.sort((a,b) => b.s - a.s);
+  const rank = Array(6).fill(0);
+  let pos = 1;
+  for (let i = 0; i < starred.length; i++) {
+    if (i > 0 && starred[i].s < starred[i-1].s) pos++;
+    if (pos > 3) break;
+    if (pos === 3 && S.numPlayers < 4) break;
+    rank[starred[i].p] = pos;
+  }
+  return rank;
+}
+
+function calcGuildVP(p) {
+  let total = 0;
+  for (let g = 0; g < 6; g++) {
+    const r = guildRanks(g)[p];
+    if (r===1) total+=5; else if (r===2) total+=3; else if (r===3) total+=1;
+  }
+  return total;
+}
+
+function isActive(p, r) {
+  for (const loc of S.region[r]) {
+    if (loc.ruler === p) return true;
+    if (loc.hasLandscape && loc.serf === p) return true;
+  }
+  return false;
+}
+
+function calcRegionVP(p) {
+  let count = 0;
+  for (let r = 0; r < 6; r++) if (isActive(p, r)) count++;
+  return ACTIVE_VP[count] || 0;
+}
+
+function calcLandscapeVP(p) {
+  let total = 0;
+  for (let r = 0; r < 6; r++)
+    for (const loc of S.region[r])
+      if (loc.hasLandscape && loc.serf === p) total += loc.hasRes ? 4 : 2;
+  return total;
+}
+
+function hasFeudum(p) {
+  for (let r = 0; r < 6; r++)
+    for (const loc of S.region[r])
+      if (loc.ruler === p && loc.type === 'Feudum') return true;
+  return false;
+}
+
+function calcDisVP(p) {
+  if (!hasFeudum(p)) return 0;
+  const d = S.dis[p]; let pen = 0;
+  if (S.epoch >= 2 && !d.ep2) pen -= 3;
+  if (S.epoch >= 4 && !d.ep4) pen -= 4;
+  if (S.epoch >= 5 && !d.ep5) pen -= 5;
+  return pen;
+}
+
+// ──────────────────────────────────────────────
+// HELPERS
+// ──────────────────────────────────────────────
+function pOpts(sel, none=true, noneLbl='ไม่มี') {
+  let s = none ? `<option value="-1"${sel===-1?' selected':''}>— ${noneLbl} —</option>` : '';
+  for (let p = 0; p < S.numPlayers; p++)
+    s += `<option value="${p}"${sel===p?' selected':''}>${S.names[p]}</option>`;
+  return s;
+}
+
+function dot(p, size=13) {
+  return `<span style="display:inline-block;width:${size}px;height:${size}px;border-radius:50%;background:${P_COLORS[p]};vertical-align:middle;margin-right:6px;border:1px solid rgba(0,0,0,.2)"></span>`;
+}
+
+function spinner(id, val, min=0, max=99) {
+  return `<div class="spn">
+    <button class="spn-btn" onclick="${id}_adj(-1)">−</button>
+    <span class="spn-val" id="${id}-val">${val}</span>
+    <button class="spn-btn" onclick="${id}_adj(1)">+</button>
+  </div>`;
+}
+
+// ──────────────────────────────────────────────
+// RENDER
+// ──────────────────────────────────────────────
+function renderPlayers() {
+  // count buttons
+  let h = '';
+  for (let n=1;n<=6;n++)
+    h += `<button class="count-btn${n===S.numPlayers?' active':''}" onclick="setPlayers(${n})">${n}</button>`;
+  document.getElementById('count-btns').innerHTML = h;
+
+  // player cards
+  h = '';
+  for (let p=0;p<S.numPlayers;p++) {
+    h += `<div class="player-card" style="border-color:${P_COLORS[p]};background:${P_BG[p]}">
+      <div class="player-dot" style="background:${P_COLORS[p]}"></div>
+      <div style="font-size:.78em;color:var(--brown-mid);margin-bottom:4px">ผู้เล่น ${p+1}</div>
+      <input class="player-name-input" style="border-color:${P_COLORS[p]}"
+             value="${S.names[p]}" onchange="S.names[${p}]=this.value;renderAll()">
+    </div>`;
+  }
+  document.getElementById('players-grid').innerHTML = h;
+}
+
+function renderEpoch() {
+  const labels = ['I','II','III','IV','V'];
+  let h = '';
+  for (let e=1;e<=5;e++) {
+    const warn = DIS_EPOCHS.includes(e) ? ' ⚠️' : '';
+    h += `<button class="epoch-btn${e===S.epoch?' active':''}" onclick="setEpoch(${e})">ยุค ${labels[e-1]}${warn}</button>`;
+  }
+  document.getElementById('epoch-btns').innerHTML = h;
+  const hasDis = DIS_EPOCHS.includes(S.epoch);
+  document.getElementById('dis-note').style.display = hasDis ? 'block' : 'none';
+}
+
+function renderGuilds() {
+  let html = '';
+  for (let g=0;g<6;g++) {
+    const G = GUILDS[g];
+    const ranks = guildRanks(g);
+    let rows = '';
+    for (let p=0;p<S.numPlayers;p++) {
+      const d = S.guild[g][p];
+      const stars = guildStars(g,p);
+      const hasPri = d.pawns>0||d.feudums>0;
+      const r = ranks[p];
+      const vp = r===1?5:r===2?3:r===3?1:0;
+      const rankBadge = r===1?`<span class="badge badge-master">🥇 Guild Master</span>`
+                       :r===2?`<span class="badge badge-journeyman">🥈 Journeyman</span>`
+                       :r===3?`<span class="badge badge-apprentice">🥉 Apprentice</span>`
+                       :'<span style="color:#aaa">—</span>';
+      rows += `<tr>
+        <td class="left">${dot(p)}${S.names[p]}</td>
+        <td><div class="spn">
+          <button class="spn-btn" onclick="adjGuild(${g},${p},'pawns',-1)">−</button>
+          <span class="spn-val">${d.pawns}</span>
+          <button class="spn-btn" onclick="adjGuild(${g},${p},'pawns',1)">+</button>
+        </div></td>
+        <td><div class="spn">
+          <button class="spn-btn" onclick="adjGuild(${g},${p},'feudums',-1)">−</button>
+          <span class="spn-val">${d.feudums}</span>
+          <button class="spn-btn" onclick="adjGuild(${g},${p},'feudums',1)">+</button>
+        </div></td>
+        <td><div class="spn">
+          <button class="spn-btn" onclick="adjGuild(${g},${p},'locs',-1)">−</button>
+          <span class="spn-val${!hasPri&&d.locs>0?' vp-neg':''}">${d.locs}</span>
+          <button class="spn-btn" onclick="adjGuild(${g},${p},'locs',1)">+</button>
+        </div>${!hasPri&&d.locs>0?'<div style="font-size:.7em;color:#c00">ต้องมี Pawn/Feudum ก่อน</div>':''}</td>
+        <td><strong>${stars} ⭐</strong></td>
+        <td>${rankBadge}</td>
+        <td style="color:${vp>0?'#1a6e1a':'#aaa'};font-weight:bold">${vp>0?'+':''}${vp} VP</td>
+      </tr>`;
+    }
+    html += `<div class="guild-block" style="border-color:${G.color}">
+      <div class="guild-head" style="background:${G.color}">${G.emoji} กิลด์${G.th} — ${G.name} Guild</div>
+      <div class="scroll-x" style="padding:0 12px 12px">
+        <table>
+          <thead><tr>
+            <th style="text-align:left">ผู้เล่น</th>
+            <th>Pawns<br><small>(+1 ⭐/อัน)</small></th>
+            <th>Feudums<br><small>(+3 ⭐/อัน)</small></th>
+            <th>พื้นที่ที่ครอบครอง<br><small>(+1 ⭐/อัน)*</small></th>
+            <th>ดาวรวม</th>
+            <th>สถานะ</th>
+            <th>Guild VP</th>
+          </tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>
+      <div class="guild-note">* พื้นที่ (Outpost/Farm/Town) ที่มี icon ของกิลด์นี้ — นับเฉพาะเมื่อผู้เล่นมี Pawn หรือ Feudum ของกิลด์นี้ก่อน</div>
+    </div>`;
+  }
+  document.getElementById('guilds-container').innerHTML = html;
+}
+
+function renderRegions() {
+  let html = '';
+  for (let r=0;r<6;r++) {
+    const R = REGIONS[r];
+    let locsHtml = '';
+    for (let l=0;l<R.count;l++) {
+      const loc = S.region[r][l];
+      const hasRuler = loc.ruler >= 0;
+
+      let landExtra = '';
+      if (loc.hasLandscape) {
+        landExtra = `<div style="margin-top:8px;padding:8px;background:rgba(160,140,80,.15);border-radius:4px;display:flex;gap:12px;flex-wrap:wrap;align-items:center">
+          <div style="min-width:130px">
+            <label style="font-size:.78em;color:var(--brown-mid);font-weight:600;display:block;margin-bottom:3px">Serf (เจ้าของ Landscape):</label>
+            <select onchange="setLoc(${r},${l},'serf',parseInt(this.value))">${pOpts(loc.serf,false,'เลือกผู้เล่น')}</select>
+          </div>
+          <label class="chk-label">
+            <input type="checkbox" ${loc.hasRes?'checked':''} onchange="setLoc(${r},${l},'hasRes',this.checked)">
+            มี Resource (4 VP แทน 2 VP)
+          </label>
+        </div>`;
+      }
+
+      locsHtml += `<div class="loc-item">
+        <div style="font-size:.78em;font-weight:700;color:${R.color};margin-bottom:6px">พื้นที่ #${l+1}</div>
+        <div class="loc-row">
+          <div class="loc-field">
+            <label>ผู้ครอบครอง (Ruler):</label>
+            <select onchange="setLoc(${r},${l},'ruler',parseInt(this.value))">${pOpts(loc.ruler)}</select>
+          </div>
+          <div class="loc-field">
+            <label>ประเภท:</label>
+            <select ${!hasRuler?'disabled':''} onchange="setLoc(${r},${l},'type',this.value)">
+              ${LOC_TYPES.map(t=>`<option value="${t}"${loc.type===t?' selected':''}>${t}</option>`).join('')}
+            </select>
+          </div>
+        </div>
+        <div style="margin-top:8px">
+          <label class="chk-label">
+            <input type="checkbox" ${loc.hasLandscape?'checked':''} onchange="setLoc(${r},${l},'hasLandscape',this.checked)">
+            มี Landscape
+          </label>
+        </div>
+        ${landExtra}
+      </div>`;
+    }
+
+    // summary
+    const activeP = [];
+    for (let p=0;p<S.numPlayers;p++) if (isActive(p,r)) activeP.push(p);
+    const summary = activeP.length > 0
+      ? `<div style="padding:6px 12px;background:rgba(0,0,0,.06);font-size:.8em;color:var(--brown-mid)">
+           Active: ${activeP.map(p=>`${dot(p,10)}${S.names[p]}`).join(', ')}
+         </div>`
+      : `<div style="padding:6px 12px;background:rgba(0,0,0,.04);font-size:.8em;color:#aaa">ยังไม่มีผู้เล่น Active</div>`;
+
+    html += `<div class="region-card" style="border-color:${R.border}">
+      <div class="region-head" style="background:${R.color}">${R.emoji} ${R.th} Region — ${R.count} พื้นที่</div>
+      ${locsHtml}
+      ${summary}
+    </div>`;
+  }
+  document.getElementById('regions-container').innerHTML = html;
+}
+
+function renderDisloyalty() {
+  const hasDis = DIS_EPOCHS.includes(S.epoch);
+  document.getElementById('dis-section').style.display = hasDis ? 'block' : 'none';
+  if (!hasDis) return;
+
+  const labels = {ep2:'Epoch II (−3 VP)', ep4:'Epoch IV (−4 VP)', ep5:'Epoch V (−5 VP)'};
+  let rows = '';
+  let anyVassal = false;
+  for (let p=0;p<S.numPlayers;p++) {
+    if (!hasFeudum(p)) continue;
+    anyVassal = true;
+    const d = S.dis[p];
+    const pen = calcDisVP(p);
+    let checks = '';
+    if (S.epoch>=2) checks+=`<label class="chk-label"><input type="checkbox" ${d.ep2?'checked':''} onchange="S.dis[${p}].ep2=this.checked;renderDisloyalty();renderResults()"> ผ่าน ${labels.ep2}</label>`;
+    if (S.epoch>=4) checks+=`<label class="chk-label"><input type="checkbox" ${d.ep4?'checked':''} onchange="S.dis[${p}].ep4=this.checked;renderDisloyalty();renderResults()"> ผ่าน ${labels.ep4}</label>`;
+    if (S.epoch>=5) checks+=`<label class="chk-label"><input type="checkbox" ${d.ep5?'checked':''} onchange="S.dis[${p}].ep5=this.checked;renderDisloyalty();renderResults()"> ผ่าน ${labels.ep5}</label>`;
+    rows += `<tr>
+      <td class="left">${dot(p)}${S.names[p]}</td>
+      <td style="text-align:left"><div class="dis-checks">${checks}</div></td>
+      <td class="${pen<0?'vp-neg':''}">${pen} VP</td>
+    </tr>`;
+  }
+
+  document.getElementById('dis-body').innerHTML = anyVassal
+    ? `<div class="sub-label" style="margin-bottom:12px">ทำเครื่องหมายว่าผู้เล่นได้ทำ Military Service ครอบคลุม catapult space ของแต่ละยุคแล้วหรือไม่</div>
+       <div class="scroll-x">
+         <table><thead><tr>
+           <th style="text-align:left">ผู้เล่น (มี Feudum)</th>
+           <th style="text-align:left">Military Service ที่ทำแล้ว</th>
+           <th>แต้มหัก</th>
+         </tr></thead><tbody>${rows}</tbody></table>
+       </div>`
+    : `<p style="color:var(--brown-mid)">ไม่มีผู้เล่นที่ครอบครอง Feudum ในยุคนี้</p>`;
+}
+
+function renderResults() {
+  let rows = '';
+  for (let p=0;p<S.numPlayers;p++) {
+    const gVP  = calcGuildVP(p);
+    const lVP  = calcLandscapeVP(p);
+    const rVP  = calcRegionVP(p);
+    const dVP  = calcDisVP(p);
+    const tot  = gVP + lVP + rVP + dVP;
+    let actCount = 0;
+    for (let r=0;r<6;r++) if (isActive(p,r)) actCount++;
+    rows += `<tr>
+      <td class="left" style="font-weight:bold">${dot(p)}${S.names[p]}</td>
+      <td class="${gVP>0?'vp-pos':''}">${gVP>0?'+':''}${gVP}</td>
+      <td class="${lVP>0?'vp-pos':''}">${lVP>0?'+':''}${lVP}</td>
+      <td class="${rVP>0?'vp-pos':''}">${rVP>0?'+':''}${rVP} <span style="font-size:.8em;color:#999">(${actCount} ภูมิภาค)</span></td>
+      <td class="${dVP<0?'vp-neg':''}">${dVP}</td>
+      <td class="vp-total" style="background:${P_BG[p]}">${tot>0?'+':''}${tot} VP</td>
+    </tr>`;
+  }
+  document.getElementById('results-body').innerHTML = rows;
+}
+
+function renderAll() {
+  renderPlayers();
+  renderEpoch();
+  renderGuilds();
+  renderRegions();
+  renderDisloyalty();
+  renderResults();
+}
+
+// ──────────────────────────────────────────────
+// ACTIONS
+// ──────────────────────────────────────────────
+function setPlayers(n) {
+  S.numPlayers = n;
+  renderAll();
+}
+
+function setEpoch(e) {
+  S.epoch = e;
+  renderEpoch();
+  renderDisloyalty();
+  renderResults();
+}
+
+function adjGuild(g, p, field, delta) {
+  S.guild[g][p][field] = Math.max(0, S.guild[g][p][field] + delta);
+  renderGuilds();
+  renderResults();
+}
+
+function setLoc(r, l, field, val) {
+  const loc = S.region[r][l];
+  loc[field] = val;
+  if (field === 'ruler' && val === -1) {
+    loc.type = 'Outpost';
+    loc.hasLandscape = false;
+    loc.serf = -1;
+    loc.hasRes = false;
+  }
+  if (field === 'hasLandscape' && !val) {
+    loc.serf = -1;
+    loc.hasRes = false;
+  }
+  renderRegions();
+  renderDisloyalty();
+  renderResults();
+}
+
+// ── Init ──
+renderAll();
+</script>
+</body>
+</html>
