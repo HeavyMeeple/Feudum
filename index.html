@@ -352,7 +352,7 @@ const REGIONS = [
   { name:'Island',    emoji:'🏝️', count:4, color:'#00695C', border:'#26A69A' },
   { name:'Forest',    emoji:'🌲', count:3, color:'#2E7D32', border:'#66BB6A' },
   { name:'Desert',    emoji:'🏜️', count:5, color:'#BF360C', border:'#FF8A65' },
-  { name:'Badlands',  emoji:'🗻', count:4, color:'#6D4C41', border:'#A1887F' },
+  { name:'Badlands',  emoji:'🗻', count:5, color:'#6D4C41', border:'#A1887F' },
   { name:'Mountain',  emoji:'⛰️', count:2, color:'#455A64', border:'#90A4AE' }
 ];
 
@@ -389,7 +389,7 @@ const S = {
   region: REGIONS.map(r => Array.from({length:r.count}, () => ({ruler:-1, type:'Outpost', feudumGuild:-1, hasLandscape:false, serf:-1, hasRes:false}))),
   // dis[p] = { ep2, ep4, ep5 }
   dis: Array.from({length:6}, () => ({ep2:false, ep4:false, ep5:false})),
-  // tieWinner[g][starValue] = playerIdx — manually picked winner for a tied group
+  // tieWinner[g][starValue] = playerIdx[] — ordered winner list for a tied group
   tieWinner: GUILDS.map(() => ({}))
 };
 
@@ -437,7 +437,7 @@ function guildGroups(g) {
 
 function guildRanks(g) {
   // returns rank[p]: 1=master, 2=journeyman, 3=apprentice, 0=none
-  // ties resolved by tieWinner state; remaining fall to player-index order
+  // ties resolved by tieWinner ordered array; remaining fall to player-index order
   const groups = guildGroups(g);
   const svs = Object.keys(groups).map(Number).sort((a,b) => b-a);
   const rank = Array(6).fill(0);
@@ -445,14 +445,9 @@ function guildRanks(g) {
   for (const sv of svs) {
     if (pos > 3 || (pos === 3 && S.numPlayers < 4)) break;
     const group = groups[sv];
-    let ordered;
-    const tw = S.tieWinner[g][sv];
-    if (group.length > 1 && tw !== undefined && group.includes(tw)) {
-      ordered = [tw, ...group.filter(p => p !== tw).sort((a,b) => a-b)];
-    } else {
-      ordered = [...group].sort((a,b) => a-b);
-    }
-    for (const p of ordered) {
+    const tw = (S.tieWinner[g][sv] || []).filter(p => group.includes(p));
+    const remaining = group.filter(p => !tw.includes(p)).sort((a,b) => a-b);
+    for (const p of [...tw, ...remaining]) {
       if (pos > 3 || (pos === 3 && S.numPlayers < 4)) break;
       rank[p] = pos++;
     }
@@ -632,7 +627,7 @@ function renderGuildTables() {
       </div>`;
     }
 
-    // Tie UI: find tied groups that affect ranks 1-3
+    // Tie UI: sequential rank selection for each tied group affecting ranks 1-3
     let tieHtml = '';
     let posCheck = 1;
     const svs = Object.keys(groups).map(Number).sort((a,b)=>b-a);
@@ -640,21 +635,37 @@ function renderGuildTables() {
       if (posCheck > 3 || (posCheck === 3 && S.numPlayers < 4)) break;
       const group = groups[sv];
       if (group.length > 1) {
-        const tw = S.tieWinner[g][sv];
-        const hasTw = tw !== undefined && group.includes(tw);
-        const rankName = RANK_NAMES[posCheck] || `Rank ${posCheck}`;
-        const opts = [...group].sort((a,b)=>a-b).map(p =>
-          `<label class="chk-label">
-            <input type="radio" name="tie_${g}_${sv}" value="${p}" ${tw===p?'checked':''}
-                   onchange="setTieWinner(${g},${sv},${p})">
-            ${dot(p,11)}${S.names[p]}
-          </label>`
-        ).join('');
-        tieHtml += `<div class="tie-box">
-          <div class="tie-box-title">⚖️ Tie at ${sv} ⭐ — Who wins ${rankName}?</div>
-          <div class="tie-options">${opts}</div>
-          ${!hasTw?'<div style="font-size:.78em;color:var(--brown-mid);margin-top:5px">No selection — defaulting to player order</div>':''}
-        </div>`;
+        // Count how many rank slots this group can fill
+        let slotsAvail = 0;
+        for (let i = 0; i < group.length; i++) {
+          const absPos = posCheck + i;
+          if (absPos > 3 || (absPos === 3 && S.numPlayers < 4)) break;
+          slotsAvail++;
+        }
+        // Need selections for each slot except (possibly) the last auto-determined one
+        const numRadios = slotsAvail < group.length ? slotsAvail : slotsAvail - 1;
+        const tw = (S.tieWinner[g][sv] || []).filter(p => group.includes(p));
+
+        for (let i = 0; i < numRadios; i++) {
+          if (i > 0 && tw[i-1] === undefined) break; // wait for prior slot before showing next
+          const absPos = posCheck + i;
+          const rankName = RANK_NAMES[absPos] || `Rank ${absPos}`;
+          const alreadyAssigned = tw.slice(0, i);
+          const candidates = group.filter(p => !alreadyAssigned.includes(p)).sort((a,b) => a-b);
+          const selected = tw[i];
+          const opts = candidates.map(p =>
+            `<label class="chk-label">
+              <input type="radio" name="tie_${g}_${sv}_${i}" value="${p}" ${selected===p?'checked':''}
+                     onchange="setTieWinner(${g},${sv},${i},${p})">
+              ${dot(p,11)}${S.names[p]}
+            </label>`
+          ).join('');
+          tieHtml += `<div class="tie-box">
+            <div class="tie-box-title">⚖️ Tie at ${sv} ⭐ — Who wins ${rankName}?</div>
+            <div class="tie-options">${opts}</div>
+            ${selected===undefined?'<div style="font-size:.78em;color:var(--brown-mid);margin-top:5px">No selection — defaulting to player order</div>':''}
+          </div>`;
+        }
       }
       posCheck += group.length;
     }
@@ -879,8 +890,11 @@ function setPawn(p, slot, guildIdx) {
   renderResults();
 }
 
-function setTieWinner(g, sv, p) {
-  S.tieWinner[g][sv] = p;
+function setTieWinner(g, sv, slotIdx, p) {
+  // Truncate at slotIdx (later choices become stale) then set this slot
+  const cur = (S.tieWinner[g][sv] || []).slice(0, slotIdx);
+  cur.push(p);
+  S.tieWinner[g][sv] = cur;
   renderGuildTables();
   renderResults();
 }
