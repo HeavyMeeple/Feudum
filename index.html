@@ -150,6 +150,40 @@
   .chk-label { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; font-size: 0.88em; color: var(--brown-dark); }
   input[type="checkbox"] { width: 14px; height: 14px; cursor: pointer; }
 
+  /* ── Guild influence cards ── */
+  .guild-players { padding: 0; }
+  .guild-player-row {
+    display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px;
+    padding: 8px 14px; border-bottom: 1px solid rgba(0,0,0,.08);
+    background: rgba(245,230,200,0.45);
+  }
+  .guild-player-row:last-child { border-bottom: none; }
+  .gpr-name  { flex: 0 0 auto; min-width: 110px; font-weight: bold; font-size: .92em; }
+  .gpr-stats { flex: 1 1 auto; display: flex; flex-wrap: wrap; gap: 4px 10px; font-size: .82em; color: var(--brown-mid); }
+  .gpr-stat  { white-space: nowrap; }
+  .gpr-rank  { flex: 0 0 auto; }
+  .gpr-vp    { flex: 0 0 auto; font-weight: bold; font-size: .95em; min-width: 44px; text-align: right; }
+
+  /* ── Result cards ── */
+  .result-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 14px; }
+  .result-card  { border: 2px solid; border-radius: 8px; overflow: hidden; }
+  .result-card-header {
+    padding: 10px 13px; display: flex; align-items: center; gap: 8px;
+    font-family: 'Cinzel', serif; font-size: .95em; font-weight: bold;
+  }
+  .result-row {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 6px 13px; border-top: 1px solid rgba(0,0,0,.08);
+    font-size: .88em; background: rgba(255,248,230,0.5);
+  }
+  .result-row:nth-child(even) { background: rgba(244,230,193,0.5); }
+  .result-row-label { color: var(--brown-mid); }
+  .result-total {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 9px 13px; border-top: 2px solid;
+    font-family: 'Cinzel', serif; font-weight: bold; font-size: 1.05em;
+  }
+
   /* ── Disloyalty ── */
   .dis-checks { display: flex; flex-wrap: wrap; gap: 14px; }
 
@@ -173,6 +207,7 @@
     .header h1 { font-size: 1.7em; }
     .region-grid { grid-template-columns: 1fr; }
     .players-grid { grid-template-columns: repeat(2, 1fr); }
+    .result-cards { grid-template-columns: 1fr; }
   }
 </style>
 </head>
@@ -210,13 +245,13 @@
 
   <!-- Step 3 -->
   <div class="section">
-    <div class="section-header">🏛 Step 3 — Guild Status</div>
+    <div class="section-header">♟ Step 3 — Pawns Status</div>
     <div class="section-body">
       <div class="sub-label">
-        Assign each player's pawns (up to 3) to a guild. Feudums and locations are auto-counted from Step 4.<br>
-        ⭐ Stars = Pawn ×1, Feudum ×3, Location ×1 (locations only counted when the player has a Pawn or Feudum in that guild)
+        Assign each player's pawns (up to 3) to a guild.<br>
+        Feudums and locations are auto-counted from Step 4.
       </div>
-      <div id="guilds-container"></div>
+      <div id="pawns-container"></div>
     </div>
   </div>
 
@@ -226,9 +261,21 @@
     <div class="section-body">
       <div class="sub-label">
         Specify the ruler and type for each location to calculate Active Regions and Landscape VP.<br>
-        A player is considered "Active" in a region if they are the Ruler of at least one location, or are the Serf of a Landscape there.
+        A player is "Active" in a region if they Rule at least one location, or are the Serf of a Landscape there.
       </div>
       <div class="region-grid" id="regions-container"></div>
+    </div>
+  </div>
+
+  <!-- Guild Influence -->
+  <div class="section">
+    <div class="section-header">🏛 Guild Influence</div>
+    <div class="section-body">
+      <div class="sub-label">
+        Guild standings auto-calculated from pawn assignments and location data above.<br>
+        ⭐ Stars = Pawn ×1, Feudum ×3, Location ×1 &nbsp;|&nbsp; VP: Master +5 / Journeyman +3 / Apprentice +1
+      </div>
+      <div id="guild-tables-container"></div>
     </div>
   </div>
 
@@ -242,26 +289,7 @@
   <div class="section">
     <div class="section-header">🏆 Score Epoch Results</div>
     <div class="section-body">
-      <div class="info-box">
-        Guild Status: 5/3/1 VP (Master/Journeyman/Apprentice) &nbsp;|&nbsp;
-        Landscapes: 4 VP (with resource) / 2 VP (empty) &nbsp;|&nbsp;
-        Active Regions: 1/3/5/7/9/11 VP (1–6 regions)
-      </div>
-      <div class="scroll-x">
-        <table class="results-table">
-          <thead>
-            <tr>
-              <th style="text-align:left">Player</th>
-              <th>Guild Status VP</th>
-              <th>Landscapes VP</th>
-              <th>Active Regions VP</th>
-              <th>Disloyalty VP</th>
-              <th>Epoch Total</th>
-            </tr>
-          </thead>
-          <tbody id="results-body"></tbody>
-        </table>
-      </div>
+      <div id="results-container"></div>
     </div>
   </div>
 
@@ -488,11 +516,8 @@ function renderEpoch() {
 }
 
 function renderGuilds() {
-  // ── Pawn assignment section ──
-  const guildNoneOpt = `<option value="-1">— None —</option>` +
-    GUILDS.map((G,i) => `<option value="${i}">${G.emoji} ${G.name}</option>`).join('');
-
-  let pawnHtml = '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;margin-bottom:20px">';
+  // ── Pawn assignment (Step 3) ──
+  let pawnHtml = '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px">';
   for (let p=0;p<S.numPlayers;p++) {
     let slots = '';
     for (let s=0;s<3;s++) {
@@ -512,15 +537,15 @@ function renderGuilds() {
     </div>`;
   }
   pawnHtml += '</div>';
+  document.getElementById('pawns-container').innerHTML = pawnHtml;
 
-  // ── Guild standings tables ──
+  // ── Guild influence cards (after Step 4) ──
   let tablesHtml = '';
   for (let g=0;g<6;g++) {
     const G = GUILDS[g];
     const ranks = guildRanks(g);
-    // Describe which location type feeds this guild
     const feedTypes = Object.entries(LOC_GUILD).filter(([,gs])=>gs.includes(g)).map(([t])=>t);
-    let rows = '';
+    let playerRows = '';
     for (let p=0;p<S.numPlayers;p++) {
       const pawns   = getPawnCount(g, p);
       const feudums = getFeudumCount(g, p);
@@ -529,41 +554,29 @@ function renderGuilds() {
       const hasPri  = pawns > 0 || feudums > 0;
       const r = ranks[p];
       const vp = r===1?5:r===2?3:r===3?1:0;
-      const rankBadge = r===1?`<span class="badge badge-master">🥇 Guild Master</span>`
+      const rankBadge = r===1?`<span class="badge badge-master">🥇 Master</span>`
                        :r===2?`<span class="badge badge-journeyman">🥈 Journeyman</span>`
                        :r===3?`<span class="badge badge-apprentice">🥉 Apprentice</span>`
-                       :'<span style="color:#aaa">—</span>';
-      rows += `<tr>
-        <td class="left">${dot(p)}${S.names[p]}</td>
-        <td>${pawns}</td>
-        <td>${feudums}</td>
-        <td>${locs}${!hasPri&&locs>0?'<div style="font-size:.7em;color:#c00">Needs Pawn/Feudum</div>':''}</td>
-        <td><strong>${stars} ⭐</strong></td>
-        <td>${rankBadge}</td>
-        <td style="color:${vp>0?'#1a6e1a':'#aaa'};font-weight:bold">${vp>0?'+':''}${vp} VP</td>
-      </tr>`;
+                       :'<span style="color:#bbb;font-size:.82em">No rank</span>';
+      playerRows += `<div class="guild-player-row">
+        <div class="gpr-name">${dot(p,12)}${S.names[p]}</div>
+        <div class="gpr-stats">
+          <span class="gpr-stat">Pawns: <strong>${pawns}</strong></span>
+          <span class="gpr-stat">Feudums: <strong>${feudums}</strong></span>
+          <span class="gpr-stat">Locs: <strong>${locs}${!hasPri&&locs>0?'⚠':''}  </strong></span>
+          <span class="gpr-stat">⭐ <strong>${stars}</strong></span>
+        </div>
+        <div class="gpr-rank">${rankBadge}</div>
+        <div class="gpr-vp" style="color:${vp>0?'#1a6e1a':'#aaa'}">${vp>0?'+':''}${vp} VP</div>
+      </div>`;
     }
-    tablesHtml += `<div class="guild-block" style="border-color:${G.color}">
+    tablesHtml += `<div class="guild-block" style="border-color:${G.color};margin-bottom:14px">
       <div class="guild-head" style="background:${G.color}">${G.emoji} ${G.name} Guild</div>
-      <div class="scroll-x" style="padding:0 12px 12px">
-        <table>
-          <thead><tr>
-            <th style="text-align:left">Player</th>
-            <th>Pawns<br><small>(+1 ⭐ each)</small></th>
-            <th>Feudums<br><small>(+3 ⭐, from Step 4)</small></th>
-            <th>Locations<br><small>(+1 ⭐, from Step 4)*</small></th>
-            <th>Total Stars</th>
-            <th>Status</th>
-            <th>Guild VP</th>
-          </tr></thead>
-          <tbody>${rows}</tbody>
-        </table>
-      </div>
-      <div class="guild-note">* Counts ${feedTypes.join('/')} locations owned by the player — only when they already have a Pawn or Feudum in this guild</div>
+      <div class="guild-players">${playerRows}</div>
+      <div class="guild-note">Locations counted: ${feedTypes.join(' / ')} — only when player has a Pawn or Feudum here</div>
     </div>`;
   }
-
-  document.getElementById('guilds-container').innerHTML = pawnHtml + tablesHtml;
+  document.getElementById('guild-tables-container').innerHTML = tablesHtml;
 }
 
 function renderRegions() {
@@ -677,7 +690,13 @@ function renderDisloyalty() {
 }
 
 function renderResults() {
-  let rows = '';
+  const legend = `<div class="info-box" style="margin-bottom:14px">
+    Guild Status: 5/3/1 VP (Master/Journeyman/Apprentice) &nbsp;|&nbsp;
+    Landscapes: 4 VP (resource) / 2 VP (empty) &nbsp;|&nbsp;
+    Active Regions: 1/3/5/7/9/11 VP (1–6 regions)
+  </div>`;
+
+  let cards = '<div class="result-cards">';
   for (let p=0;p<S.numPlayers;p++) {
     const gVP  = calcGuildVP(p);
     const lVP  = calcLandscapeVP(p);
@@ -686,16 +705,36 @@ function renderResults() {
     const tot  = gVP + lVP + rVP + dVP;
     let actCount = 0;
     for (let r=0;r<6;r++) if (isActive(p,r)) actCount++;
-    rows += `<tr>
-      <td class="left" style="font-weight:bold">${dot(p)}${S.names[p]}</td>
-      <td class="${gVP>0?'vp-pos':''}">${gVP>0?'+':''}${gVP}</td>
-      <td class="${lVP>0?'vp-pos':''}">${lVP>0?'+':''}${lVP}</td>
-      <td class="${rVP>0?'vp-pos':''}">${rVP>0?'+':''}${rVP} <span style="font-size:.8em;color:#999">(${actCount} regions)</span></td>
-      <td class="${dVP<0?'vp-neg':''}">${dVP}</td>
-      <td class="vp-total" style="background:${pBg(p)}">${tot>0?'+':''}${tot} VP</td>
-    </tr>`;
+
+    const fmt = v => (v > 0 ? '+' : '') + v;
+    cards += `<div class="result-card" style="border-color:${pColor(p)}">
+      <div class="result-card-header" style="background:${pBg(p)};border-bottom:2px solid ${pColor(p)}">
+        ${dot(p,16)}${S.names[p]}
+      </div>
+      <div class="result-row">
+        <span class="result-row-label">Guild Status</span>
+        <span class="${gVP>0?'vp-pos':''}">${fmt(gVP)} VP</span>
+      </div>
+      <div class="result-row">
+        <span class="result-row-label">Landscapes</span>
+        <span class="${lVP>0?'vp-pos':''}">${fmt(lVP)} VP</span>
+      </div>
+      <div class="result-row">
+        <span class="result-row-label">Active Regions <small style="color:#999">(${actCount})</small></span>
+        <span class="${rVP>0?'vp-pos':''}">${fmt(rVP)} VP</span>
+      </div>
+      <div class="result-row">
+        <span class="result-row-label">Disloyalty</span>
+        <span class="${dVP<0?'vp-neg':''}">${fmt(dVP)} VP</span>
+      </div>
+      <div class="result-total" style="border-color:${pColor(p)};background:${pBg(p)}">
+        <span>Epoch Total</span>
+        <span class="vp-total">${fmt(tot)} VP</span>
+      </div>
+    </div>`;
   }
-  document.getElementById('results-body').innerHTML = rows;
+  cards += '</div>';
+  document.getElementById('results-container').innerHTML = legend + cards;
 }
 
 function renderAll() {
