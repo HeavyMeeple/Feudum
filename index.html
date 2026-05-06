@@ -213,8 +213,8 @@
     <div class="section-header">🏛 Step 3 — Guild Status</div>
     <div class="section-body">
       <div class="sub-label">
-        For each guild, enter the number of Pawns / Feudums / Locations associated with that guild.<br>
-        ⭐ Stars = Pawn ×1, Feudum ×3, Location ×1 (only counted when the player has a Pawn or Feudum in that guild first)
+        Assign each player's pawns (up to 3) to a guild. Feudums and locations are auto-counted from Step 4.<br>
+        ⭐ Stars = Pawn ×1, Feudum ×3, Location ×1 (locations only counted when the player has a Pawn or Feudum in that guild)
       </div>
       <div id="guilds-container"></div>
     </div>
@@ -298,6 +298,12 @@ const COLOR_OPTIONS = [
   { name:'Gray',   color:'#7F8C8D', bg:'#EAECEE' },
 ];
 const LOC_TYPES = ['Outpost','Farm','Town','Feudum'];
+// Which guilds each location type contributes locations to
+const LOC_GUILD = {
+  'Outpost': [2, 5],  // Alchemist, Monk
+  'Farm':    [0, 3],  // Farmer, Knight
+  'Town':    [1, 4],  // Merchant, Noble
+};
 const ACTIVE_VP = [0,1,3,5,7,9,11];
 const DIS_EPOCHS = [2,4,5];
 const DIS_VP     = {2:-3, 4:-4, 5:-5};
@@ -310,10 +316,10 @@ const S = {
   epoch: 1,
   names: ['Player 1','Player 2','Player 3','Player 4','Player 5','Player 6'],
   colors: [0, 1, 2, 3, 4, 5],
-  // guild[g][p] = { pawns, feudums, locs }
-  guild: GUILDS.map(() => Array.from({length:6}, () => ({pawns:0, feudums:0, locs:0}))),
-  // region[r][l] = { ruler, type, hasLandscape, serf, hasRes }
-  region: REGIONS.map(r => Array.from({length:r.count}, () => ({ruler:-1, type:'Outpost', hasLandscape:false, serf:-1, hasRes:false}))),
+  // pawns[p][slot] = guild index (-1 = none); each player has 3 pawn slots
+  pawns: Array.from({length:6}, () => [-1, -1, -1]),
+  // region[r][l] = { ruler, type, feudumGuild, hasLandscape, serf, hasRes }
+  region: REGIONS.map(r => Array.from({length:r.count}, () => ({ruler:-1, type:'Outpost', feudumGuild:-1, hasLandscape:false, serf:-1, hasRes:false}))),
   // dis[p] = { ep2, ep4, ep5 }
   dis: Array.from({length:6}, () => ({ep2:false, ep4:false, ep5:false}))
 };
@@ -321,10 +327,33 @@ const S = {
 // ──────────────────────────────────────────────
 // CALC
 // ──────────────────────────────────────────────
+function getPawnCount(g, p) {
+  return S.pawns[p].filter(gid => gid === g).length;
+}
+
+function getFeudumCount(g, p) {
+  let n = 0;
+  for (let r = 0; r < 6; r++)
+    for (const loc of S.region[r])
+      if (loc.ruler === p && loc.type === 'Feudum' && loc.feudumGuild === g) n++;
+  return n;
+}
+
+function getLocCount(g, p) {
+  const types = Object.entries(LOC_GUILD).filter(([,gs]) => gs.includes(g)).map(([t]) => t);
+  let n = 0;
+  for (let r = 0; r < 6; r++)
+    for (const loc of S.region[r])
+      if (loc.ruler === p && types.includes(loc.type)) n++;
+  return n;
+}
+
 function guildStars(g, p) {
-  const d = S.guild[g][p];
-  const hasPrimary = d.pawns > 0 || d.feudums > 0;
-  return d.pawns + d.feudums * 3 + (hasPrimary ? d.locs : 0);
+  const pawns   = getPawnCount(g, p);
+  const feudums = getFeudumCount(g, p);
+  const locs    = getLocCount(g, p);
+  const hasPrimary = pawns > 0 || feudums > 0;
+  return pawns + feudums * 3 + (hasPrimary ? locs : 0);
 }
 
 function guildRanks(g) {
@@ -459,15 +488,45 @@ function renderEpoch() {
 }
 
 function renderGuilds() {
-  let html = '';
+  // ── Pawn assignment section ──
+  const guildNoneOpt = `<option value="-1">— None —</option>` +
+    GUILDS.map((G,i) => `<option value="${i}">${G.emoji} ${G.name}</option>`).join('');
+
+  let pawnHtml = '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;margin-bottom:20px">';
+  for (let p=0;p<S.numPlayers;p++) {
+    let slots = '';
+    for (let s=0;s<3;s++) {
+      const sel = S.pawns[p][s];
+      const opts = `<option value="-1"${sel===-1?' selected':''}>— None —</option>` +
+        GUILDS.map((G,i) => `<option value="${i}"${sel===i?' selected':''}>${G.emoji} ${G.name}</option>`).join('');
+      slots += `<div style="margin-bottom:6px">
+        <label style="font-size:.78em;color:var(--brown-mid);font-weight:600;display:block;margin-bottom:2px">Pawn ${s+1}:</label>
+        <select onchange="setPawn(${p},${s},parseInt(this.value))">${opts}</select>
+      </div>`;
+    }
+    pawnHtml += `<div style="border:2px solid ${pColor(p)};border-radius:7px;padding:10px;background:${pBg(p)}">
+      <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px;font-family:'Cinzel',serif;font-size:.9em;font-weight:bold;color:var(--brown-dark)">
+        ${dot(p,14)}${S.names[p]}
+      </div>
+      ${slots}
+    </div>`;
+  }
+  pawnHtml += '</div>';
+
+  // ── Guild standings tables ──
+  let tablesHtml = '';
   for (let g=0;g<6;g++) {
     const G = GUILDS[g];
     const ranks = guildRanks(g);
+    // Describe which location type feeds this guild
+    const feedTypes = Object.entries(LOC_GUILD).filter(([,gs])=>gs.includes(g)).map(([t])=>t);
     let rows = '';
     for (let p=0;p<S.numPlayers;p++) {
-      const d = S.guild[g][p];
-      const stars = guildStars(g,p);
-      const hasPri = d.pawns>0||d.feudums>0;
+      const pawns   = getPawnCount(g, p);
+      const feudums = getFeudumCount(g, p);
+      const locs    = getLocCount(g, p);
+      const stars   = guildStars(g, p);
+      const hasPri  = pawns > 0 || feudums > 0;
       const r = ranks[p];
       const vp = r===1?5:r===2?3:r===3?1:0;
       const rankBadge = r===1?`<span class="badge badge-master">🥇 Guild Master</span>`
@@ -476,35 +535,23 @@ function renderGuilds() {
                        :'<span style="color:#aaa">—</span>';
       rows += `<tr>
         <td class="left">${dot(p)}${S.names[p]}</td>
-        <td><div class="spn">
-          <button class="spn-btn" onclick="adjGuild(${g},${p},'pawns',-1)">−</button>
-          <span class="spn-val">${d.pawns}</span>
-          <button class="spn-btn" onclick="adjGuild(${g},${p},'pawns',1)">+</button>
-        </div></td>
-        <td><div class="spn">
-          <button class="spn-btn" onclick="adjGuild(${g},${p},'feudums',-1)">−</button>
-          <span class="spn-val">${d.feudums}</span>
-          <button class="spn-btn" onclick="adjGuild(${g},${p},'feudums',1)">+</button>
-        </div></td>
-        <td><div class="spn">
-          <button class="spn-btn" onclick="adjGuild(${g},${p},'locs',-1)">−</button>
-          <span class="spn-val${!hasPri&&d.locs>0?' vp-neg':''}">${d.locs}</span>
-          <button class="spn-btn" onclick="adjGuild(${g},${p},'locs',1)">+</button>
-        </div>${!hasPri&&d.locs>0?'<div style="font-size:.7em;color:#c00">Requires Pawn or Feudum first</div>':''}</td>
+        <td>${pawns}</td>
+        <td>${feudums}</td>
+        <td>${locs}${!hasPri&&locs>0?'<div style="font-size:.7em;color:#c00">Needs Pawn/Feudum</div>':''}</td>
         <td><strong>${stars} ⭐</strong></td>
         <td>${rankBadge}</td>
         <td style="color:${vp>0?'#1a6e1a':'#aaa'};font-weight:bold">${vp>0?'+':''}${vp} VP</td>
       </tr>`;
     }
-    html += `<div class="guild-block" style="border-color:${G.color}">
+    tablesHtml += `<div class="guild-block" style="border-color:${G.color}">
       <div class="guild-head" style="background:${G.color}">${G.emoji} ${G.name} Guild</div>
       <div class="scroll-x" style="padding:0 12px 12px">
         <table>
           <thead><tr>
             <th style="text-align:left">Player</th>
             <th>Pawns<br><small>(+1 ⭐ each)</small></th>
-            <th>Feudums<br><small>(+3 ⭐ each)</small></th>
-            <th>Locations Controlled<br><small>(+1 ⭐ each)*</small></th>
+            <th>Feudums<br><small>(+3 ⭐, from Step 4)</small></th>
+            <th>Locations<br><small>(+1 ⭐, from Step 4)*</small></th>
             <th>Total Stars</th>
             <th>Status</th>
             <th>Guild VP</th>
@@ -512,10 +559,11 @@ function renderGuilds() {
           <tbody>${rows}</tbody>
         </table>
       </div>
-      <div class="guild-note">* Locations (Outpost/Farm/Town) bearing this guild's icon — only counted when the player already has a Pawn or Feudum in this guild</div>
+      <div class="guild-note">* Counts ${feedTypes.join('/')} locations owned by the player — only when they already have a Pawn or Feudum in this guild</div>
     </div>`;
   }
-  document.getElementById('guilds-container').innerHTML = html;
+
+  document.getElementById('guilds-container').innerHTML = pawnHtml + tablesHtml;
 }
 
 function renderRegions() {
@@ -541,6 +589,14 @@ function renderRegions() {
         </div>`;
       }
 
+      const feudumGuildOpts = `<option value="-1"${loc.feudumGuild===-1?' selected':''}>— Select Guild —</option>` +
+        GUILDS.map((G,i) => `<option value="${i}"${loc.feudumGuild===i?' selected':''}>${G.emoji} ${G.name}</option>`).join('');
+      const feudumGuildRow = (hasRuler && loc.type === 'Feudum') ? `
+        <div style="margin-top:8px">
+          <label style="font-size:.78em;color:var(--brown-mid);font-weight:600;display:block;margin-bottom:3px">Feudum Guild:</label>
+          <select onchange="setLoc(${r},${l},'feudumGuild',parseInt(this.value))">${feudumGuildOpts}</select>
+        </div>` : '';
+
       locsHtml += `<div class="loc-item">
         <div style="font-size:.78em;font-weight:700;color:${R.color};margin-bottom:6px">Location #${l+1}</div>
         <div class="loc-row">
@@ -555,6 +611,7 @@ function renderRegions() {
             </select>
           </div>
         </div>
+        ${feudumGuildRow}
         <div style="margin-top:8px">
           <label class="chk-label">
             <input type="checkbox" ${loc.hasLandscape?'checked':''} onchange="setLoc(${r},${l},'hasLandscape',this.checked)">
@@ -665,8 +722,8 @@ function setEpoch(e) {
   renderResults();
 }
 
-function adjGuild(g, p, field, delta) {
-  S.guild[g][p][field] = Math.max(0, S.guild[g][p][field] + delta);
+function setPawn(p, slot, guildIdx) {
+  S.pawns[p][slot] = guildIdx;
   renderGuilds();
   renderResults();
 }
@@ -676,9 +733,13 @@ function setLoc(r, l, field, val) {
   loc[field] = val;
   if (field === 'ruler' && val === -1) {
     loc.type = 'Outpost';
+    loc.feudumGuild = -1;
     loc.hasLandscape = false;
     loc.serf = -1;
     loc.hasRes = false;
+  }
+  if (field === 'type' && val !== 'Feudum') {
+    loc.feudumGuild = -1;
   }
   if (field === 'hasLandscape' && !val) {
     loc.serf = -1;
