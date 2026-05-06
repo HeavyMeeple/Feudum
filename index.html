@@ -357,12 +357,12 @@ const REGIONS = [
 ];
 
 const COLOR_OPTIONS = [
-  { name:'Red',    color:'#C0392B', bg:'#FADBD8' },
-  { name:'Yellow', color:'#C9A000', bg:'#FEF9E7' },
-  { name:'Blue',   color:'#2980B9', bg:'#D6EAF8' },
-  { name:'Green',  color:'#27AE60', bg:'#D5F5E3' },
-  { name:'Pink',   color:'#D63384', bg:'#FCE4EC' },
-  { name:'Gray',   color:'#7F8C8D', bg:'#EAECEE' },
+  { name:'Red',    color:'#B73431', bg:'#F5D5D4' },
+  { name:'Yellow', color:'#C8A800', bg:'#FBF6D8' },
+  { name:'Blue',   color:'#3F5FA8', bg:'#D5DCF0' },
+  { name:'Green',  color:'#647A4F', bg:'#DCE4D5' },
+  { name:'Pink',   color:'#B762AC', bg:'#F0D5EE' },
+  { name:'Gray',   color:'#848781', bg:'#E5E5E3' },
 ];
 const LOC_TYPES = ['Outpost','Farm','Town','Feudum'];
 // Which guilds each location type contributes locations to
@@ -816,6 +816,19 @@ function renderResults() {
     for (let r=0;r<6;r++) if (isActive(p,r)) actCount++;
 
     const fmt = v => (v > 0 ? '+' : '') + v;
+
+    // Guild breakdown: which guilds this player ranked in
+    const gBreak = {1:[],2:[],3:[]};
+    for (let g=0;g<6;g++) { const r=guildRanks(g)[p]; if(r>=1&&r<=3) gBreak[r].push(g); }
+    const gBreakHtml = [1,2,3].map(rank => {
+      if (!gBreak[rank].length) return '';
+      const medal = rank===1?'🥇':rank===2?'🥈':'🥉';
+      const stars = gBreak[rank].map(g=>
+        `<span title="${GUILDS[g].name}" style="color:${GUILDS[g].color};font-size:1.15em;line-height:1;text-shadow:0 0 1px rgba(0,0,0,.25)">★</span>`
+      ).join('');
+      return `<span style="white-space:nowrap;margin-right:4px">${medal}${stars}</span>`;
+    }).join('');
+
     cards += `<div class="result-card" style="border-color:${pColor(p)}">
       <div class="result-card-header" style="background:${pBg(p)};border-bottom:2px solid ${pColor(p)}">
         ${dot(p,16)}${S.names[p]}
@@ -824,6 +837,7 @@ function renderResults() {
         <span class="result-row-label">Guild Status</span>
         <span class="${gVP>0?'vp-pos':''}">${fmt(gVP)} VP</span>
       </div>
+      ${gBreakHtml?`<div class="result-row" style="justify-content:flex-start;gap:6px;padding-top:3px;padding-bottom:5px;border-top:1px dashed rgba(0,0,0,.1)">${gBreakHtml}</div>`:''}
       <div class="result-row">
         <span class="result-row-label">Landscapes</span>
         <span class="${lVP>0?'vp-pos':''}">${fmt(lVP)} VP</span>
