@@ -289,8 +289,14 @@ const REGIONS = [
   { name:'Mountain',  emoji:'⛰️', count:2, color:'#455A64', border:'#90A4AE' }
 ];
 
-const P_COLORS = ['#C0392B','#2980B9','#27AE60','#8E44AD','#E67E22','#16A085'];
-const P_BG     = ['#FADBD8','#D6EAF8','#D5F5E3','#E8DAEF','#FDEBD0','#D1F2EB'];
+const COLOR_OPTIONS = [
+  { name:'Red',    color:'#C0392B', bg:'#FADBD8' },
+  { name:'Yellow', color:'#C9A000', bg:'#FEF9E7' },
+  { name:'Blue',   color:'#2980B9', bg:'#D6EAF8' },
+  { name:'Green',  color:'#27AE60', bg:'#D5F5E3' },
+  { name:'Pink',   color:'#D63384', bg:'#FCE4EC' },
+  { name:'Gray',   color:'#7F8C8D', bg:'#EAECEE' },
+];
 const LOC_TYPES = ['Outpost','Farm','Town','Feudum'];
 const ACTIVE_VP = [0,1,3,5,7,9,11];
 const DIS_EPOCHS = [2,4,5];
@@ -303,6 +309,7 @@ const S = {
   numPlayers: 4,
   epoch: 1,
   names: ['Player 1','Player 2','Player 3','Player 4','Player 5','Player 6'],
+  colors: [0, 1, 2, 3, 4, 5],
   // guild[g][p] = { pawns, feudums, locs }
   guild: GUILDS.map(() => Array.from({length:6}, () => ({pawns:0, feudums:0, locs:0}))),
   // region[r][l] = { ruler, type, hasLandscape, serf, hasRes }
@@ -396,8 +403,11 @@ function pOpts(sel, none=true, noneLbl='None') {
   return s;
 }
 
+function pColor(p) { return COLOR_OPTIONS[S.colors[p]].color; }
+function pBg(p)    { return COLOR_OPTIONS[S.colors[p]].bg; }
+
 function dot(p, size=13) {
-  return `<span style="display:inline-block;width:${size}px;height:${size}px;border-radius:50%;background:${P_COLORS[p]};vertical-align:middle;margin-right:6px;border:1px solid rgba(0,0,0,.2)"></span>`;
+  return `<span style="display:inline-block;width:${size}px;height:${size}px;border-radius:50%;background:${pColor(p)};vertical-align:middle;margin-right:6px;border:1px solid rgba(0,0,0,.2)"></span>`;
 }
 
 function spinner(id, val, min=0, max=99) {
@@ -421,11 +431,16 @@ function renderPlayers() {
   // player cards
   h = '';
   for (let p=0;p<S.numPlayers;p++) {
-    h += `<div class="player-card" style="border-color:${P_COLORS[p]};background:${P_BG[p]}">
-      <div class="player-dot" style="background:${P_COLORS[p]}"></div>
+    const colorOpts = COLOR_OPTIONS.map((c,i) =>
+      `<option value="${i}"${S.colors[p]===i?' selected':''}>${c.name}</option>`
+    ).join('');
+    h += `<div class="player-card" style="border-color:${pColor(p)};background:${pBg(p)}">
+      <div class="player-dot" style="background:${pColor(p)}"></div>
       <div style="font-size:.78em;color:var(--brown-mid);margin-bottom:4px">Player ${p+1}</div>
-      <input class="player-name-input" style="border-color:${P_COLORS[p]}"
+      <input class="player-name-input" style="border-color:${pColor(p)};margin-bottom:6px"
              value="${S.names[p]}" onchange="S.names[${p}]=this.value;renderAll()">
+      <select style="font-size:.8em;border-color:${pColor(p)}"
+              onchange="S.colors[${p}]=parseInt(this.value);renderAll()">${colorOpts}</select>
     </div>`;
   }
   document.getElementById('players-grid').innerHTML = h;
@@ -620,7 +635,7 @@ function renderResults() {
       <td class="${lVP>0?'vp-pos':''}">${lVP>0?'+':''}${lVP}</td>
       <td class="${rVP>0?'vp-pos':''}">${rVP>0?'+':''}${rVP} <span style="font-size:.8em;color:#999">(${actCount} regions)</span></td>
       <td class="${dVP<0?'vp-neg':''}">${dVP}</td>
-      <td class="vp-total" style="background:${P_BG[p]}">${tot>0?'+':''}${tot} VP</td>
+      <td class="vp-total" style="background:${pBg(p)}">${tot>0?'+':''}${tot} VP</td>
     </tr>`;
   }
   document.getElementById('results-body').innerHTML = rows;
